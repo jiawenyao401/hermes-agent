@@ -98,9 +98,10 @@ export function TitlebarControls({ leftTools = [], tools = [], onOpenSettings }:
       icon: <Codicon name="settings-gear" />,
       id: 'settings',
       label: t.titlebar.openSettings,
+      hidden: true,
       onSelect: () => {
         triggerHaptic('open')
-        onOpenSettings()
+        navigate('/settings')
       }
     }
   ]
