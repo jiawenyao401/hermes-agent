@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 
 const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`
 
-// Brand badge: Huaqing logo mark.
+// Brand badge: AGENTOS logo mark.
 // Fills the tile (softly rounded); size via className (default size-14).
 export function BrandMark({ className, ...props }: React.ComponentProps<'span'>) {
   return (
@@ -15,7 +15,7 @@ export function BrandMark({ className, ...props }: React.ComponentProps<'span'>)
     >
       <img
         src={assetPath('brand/huaqing-logo.png')}
-        alt="Huaqing"
+        alt="AGENTOS"
         className="size-full object-contain"
         draggable={false}
       />

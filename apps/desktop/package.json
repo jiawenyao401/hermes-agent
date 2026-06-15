@@ -1,6 +1,6 @@
 {
   "name": "huaqing-desktop",
-  "productName": "Huaqing",
+  "productName": "AGENTOS",
   "private": true,
   "version": "0.15.1",
   "description": "Native desktop shell for Huaqing Agent.",
@@ -135,8 +135,8 @@
   "build": {
     "electronVersion": "40.9.3",
     "appId": "com.huaqing.desktop",
-    "productName": "Huaqing",
-    "executableName": "Huaqing",
+    "productName": "AGENTOS",
+    "executableName": "AGENTOS",
     "protocols": [
       {
         "name": "Huaqing Protocol",
