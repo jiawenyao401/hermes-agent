@@ -120,50 +120,50 @@
   :root {
     color-scheme: light;
 
-    --theme-foreground: #17171a;
-    --theme-primary: #0053fd;
-    --theme-secondary: color-mix(in srgb, #0053fd 7%, #ffffff);
-    --theme-accent-soft: color-mix(in srgb, #0053fd 10%, #ffffff);
-    --theme-midground: #0053fd;
-    --theme-warm: #cf806d;
-    --theme-background-seed: #f8faff;
-    --theme-sidebar-seed: #f3f7ff;
-    --theme-card-seed: #ffffff;
-    --theme-elevated-seed: #ffffff;
-    --theme-bubble-seed: color-mix(in srgb, #0053fd 6%, #ffffff);
-    --theme-neutral-chrome: #f3f3f3;
-    --theme-neutral-sidebar: #f3f3f3;
-    --theme-neutral-card: #fcfcfc;
-    --theme-mix-chrome: 92%;
+    --theme-foreground: #171717;
+    --theme-primary: #171717;
+    --theme-secondary: #F7F5EF;
+    --theme-accent-soft: #EBE6DC;
+    --theme-midground: #171717;
+    --theme-warm: #171717;
+    --theme-background-seed: #F4F2EC;
+    --theme-sidebar-seed: #FFFFFF;
+    --theme-card-seed: #FFFFFF;
+    --theme-elevated-seed: #FFFFFF;
+    --theme-bubble-seed: #F7F5EF;
+    --theme-neutral-chrome: #F4F2EC;
+    --theme-neutral-sidebar: #FFFFFF;
+    --theme-neutral-card: #FFFFFF;
+    --theme-mix-chrome: 100%;
     --theme-mix-sidebar: 100%;
-    --theme-mix-card: 22%;
-    --theme-mix-elevated: 28%;
-    --theme-mix-bubble: 0%;
-    --theme-fill-primary-accent-mix: 16%;
-    --theme-fill-secondary-accent-mix: 11%;
-    --theme-fill-tertiary-accent-mix: 8%;
-    --theme-fill-quaternary-accent-mix: 5%;
-    --theme-fill-quinary-accent-mix: 3%;
-    --theme-stroke-primary-accent-mix: 24%;
-    --theme-stroke-secondary-accent-mix: 16%;
-    --theme-stroke-tertiary-accent-mix: 10%;
-    --theme-stroke-quaternary-accent-mix: 6%;
-    --theme-row-hover-accent-mix: 4%;
-    --theme-row-active-accent-mix: 8%;
-    --theme-control-hover-accent-mix: 6%;
-    --theme-control-active-accent-mix: 8%;
+    --theme-mix-card: 100%;
+    --theme-mix-elevated: 100%;
+    --theme-mix-bubble: 100%;
+    --theme-fill-primary-accent-mix: 100%;
+    --theme-fill-secondary-accent-mix: 100%;
+    --theme-fill-tertiary-accent-mix: 100%;
+    --theme-fill-quaternary-accent-mix: 100%;
+    --theme-fill-quinary-accent-mix: 100%;
+    --theme-stroke-primary-accent-mix: 100%;
+    --theme-stroke-secondary-accent-mix: 100%;
+    --theme-stroke-tertiary-accent-mix: 100%;
+    --theme-stroke-quaternary-accent-mix: 100%;
+    --theme-row-hover-accent-mix: 100%;
+    --theme-row-active-accent-mix: 100%;
+    --theme-control-hover-accent-mix: 100%;
+    --theme-control-active-accent-mix: 100%;
 
     --ui-base: var(--theme-foreground);
     --ui-accent: var(--theme-midground);
     --ui-accent-secondary: var(--theme-primary);
     --ui-warm: var(--theme-warm);
-    --ui-red: #cf2d56;
-    --ui-orange: #db704b;
-    --ui-yellow: #c08532;
-    --ui-green: #1f8a65;
-    --ui-cyan: #4c7f8c;
-    --ui-blue: #0053fd;
-    --ui-purple: #9e94d5;
+    --ui-red: #B42318;
+    --ui-orange: #9A6500;
+    --ui-yellow: #9A6500;
+    --ui-green: #12875C;
+    --ui-cyan: #6B6B63;
+    --ui-blue: #2563EB;
+    --ui-purple: #6B6B63;
     --ui-bg-chrome: color-mix(
       in srgb,
       var(--theme-background-seed) var(--theme-mix-chrome),
@@ -287,7 +287,7 @@
     --dt-ring: var(--ui-stroke-primary);
     --dt-midground: var(--theme-midground);
     --dt-composer-ring: var(--ui-base);
-    --dt-destructive: #cf2d56;
+    --dt-destructive: #B42318;
     --dt-destructive-foreground: #ffffff;
     --dt-sidebar-bg: var(--ui-bg-sidebar);
     --dt-sidebar-border: var(--ui-stroke-secondary);
@@ -295,7 +295,7 @@
     --dt-user-bubble-border: var(--ui-stroke-tertiary);
 
     --dt-font-sans:
-      'Segoe WPC', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif,
+      'MiSans', 'Segoe WPC', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif,
       'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', emoji;
     /* Key caps always use the native UI face — never theme typography overrides. */
     --dt-font-kbd: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
@@ -307,8 +307,8 @@
     --dt-letter-spacing: 0;
     --dt-spacing-mul: 1;
 
-    --radius: 0.75rem;
-    --radius-scalar: 0.6;
+    --radius: 0.5rem;
+    --radius-scalar: 0.5;
 
     /* Space under last message vs overlay composer — driven by the measured composer height (see composer/index.tsx)
        plus the out-of-flow status stack's measured height (see status-stack/index.tsx) when one is showing. */
@@ -358,10 +358,10 @@
     --image-preview-max-width: 34rem;
     --image-preview-height: clamp(16.25rem, calc(var(--vsq) * 100), 26.25rem);
 
-    --sidebar-width: 14.8125rem;
+    --sidebar-width: 13.75rem;
     --chat-min-width: 28rem;
-    --titlebar-control-size: 1.25rem;
-    --titlebar-control-height: 1.375rem;
+    --titlebar-control-size: 1.125rem;
+    --titlebar-control-height: 1.25rem;
     --sidebar-content-inline-padding: 1rem;
 
     --sidebar: var(--dt-sidebar-bg);
@@ -387,13 +387,13 @@
 
   :root.dark {
     /* Per-mode mix knobs — overridden inline by `applyTheme()` per skin. */
-    --theme-mix-chrome: 74%;
-    --theme-mix-card: 38%;
-    --theme-mix-elevated: 46%;
-    --theme-mix-bubble: 46%;
-    --theme-neutral-chrome: #0d0d0e;
-    --theme-neutral-sidebar: #0a0a0b;
-    --theme-neutral-card: #161618;
+    --theme-mix-chrome: 100%;
+    --theme-mix-card: 100%;
+    --theme-mix-elevated: 100%;
+    --theme-mix-bubble: 100%;
+    --theme-neutral-chrome: #111111;
+    --theme-neutral-sidebar: #161616;
+    --theme-neutral-card: #1B1B1B;
 
     /* Dark-only accent palette overrides. */
     --ui-red: #e75e78;
@@ -1344,4 +1344,133 @@ canvas {
   [data-slot='aui_assistant-message-content'] .aui-md [data-slot='code-card'][data-streaming='true'] {
     animation: none;
   }
+}
+
+/* ─── Huaqing Design System Overrides ─────────────────────────────────── */
+
+/* Titlebar: compact, warm, with subtle border */
+[data-hermes-theme='huaqing'] .titlebar-header,
+[data-hermes-theme='huaqing'] [class*='titlebar'] {
+  border-bottom-color: var(--dt-border) !important;
+}
+
+/* Sidebar: white surface with warm border */
+[data-hermes-theme='huaqing'] [data-sidebar] {
+  border-right-color: var(--dt-border);
+}
+
+/* Composer: warm ring, subtle shadow */
+[data-hermes-theme='huaqing'] .composer-surface {
+  border-color: var(--dt-border);
+  box-shadow: 0 1px 3px rgba(23, 23, 23, 0.04);
+}
+
+[data-hermes-theme='huaqing'] .composer-surface:focus-within {
+  border-color: var(--dt-midground);
+  box-shadow: 0 0 0 1px var(--dt-midground), 0 2px 8px rgba(23, 23, 23, 0.06);
+}
+
+/* Settings nav items: compact, warm active state */
+[data-hermes-theme='huaqing'] .settings-nav-item {
+  border-radius: 8px;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+[data-hermes-theme='huaqing'] .settings-nav-item:hover {
+  background: var(--dt-muted);
+}
+
+[data-hermes-theme='huaqing'] .settings-nav-item[data-active='true'] {
+  background: var(--dt-primary);
+  color: var(--dt-primary-foreground);
+}
+
+/* Chat messages: warm bubble colors */
+[data-hermes-theme='huaqing'] .user-message-bubble {
+  background: var(--dt-user-bubble);
+  border-color: var(--dt-user-bubble-border);
+  border-radius: 12px;
+}
+
+/* Cards: warm borders, subtle shadows */
+[data-hermes-theme='huaqing'] .card,
+[data-hermes-theme='huaqing'] [data-slot='card'] {
+  border-color: var(--dt-border);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(23, 23, 23, 0.03);
+}
+
+/* Buttons: Huaqing primary = deep ink */
+[data-hermes-theme='huaqing'] button[class*='bg-primary'] {
+  background: var(--dt-primary);
+  color: var(--dt-primary-foreground);
+  border-radius: 999px;
+  transition: opacity 160ms ease;
+}
+
+[data-hermes-theme='huaqing'] button[class*='bg-primary']:hover {
+  opacity: 0.88;
+}
+
+/* Inputs: warm borders, full radius for search/pills */
+[data-hermes-theme='huaqing'] input,
+[data-hermes-theme='huaqing'] textarea {
+  border-color: var(--dt-border);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+[data-hermes-theme='huaqing'] input:focus,
+[data-hermes-theme='huaqing'] textarea:focus {
+  border-color: var(--dt-midground);
+  box-shadow: 0 0 0 1px var(--dt-midground);
+}
+
+/* Overlay panels: warm surface */
+[data-hermes-theme='huaqing'] .overlay-panel {
+  border-color: var(--dt-border);
+  border-radius: 8px;
+}
+
+/* Scrollbar: subtle, warm */
+[data-hermes-theme='huaqing'] ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+[data-hermes-theme='huaqing'] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-hermes-theme='huaqing'] ::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--dt-foreground) 12%, transparent);
+  border-radius: 999px;
+}
+
+[data-hermes-theme='huaqing'] ::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--dt-foreground) 22%, transparent);
+}
+
+/* Status indicators: use Huaqing semantic colors */
+[data-hermes-theme='huaqing'] .status-success {
+  color: #12875C;
+}
+
+[data-hermes-theme='huaqing'] .status-warning {
+  color: #9A6500;
+}
+
+[data-hermes-theme='huaqing'] .status-error {
+  color: #B42318;
+}
+
+/* Toast notifications: warm surface */
+[data-hermes-theme='huaqing'] .notification-toast {
+  border-color: var(--dt-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(23, 23, 23, 0.08);
+}
+
+/* Selection: warm highlight */
+[data-hermes-theme='huaqing'] ::selection {
+  background: color-mix(in srgb, #171717 12%, transparent);
 }

@@ -278,7 +278,78 @@ export const slateTheme: DesktopTheme = {
   }
 }
 
+/**
+ * Huaqing — warm-neutral console identity. The palette is built from warm
+ * grays and deep ink. Light mode uses #F4F2EC background with #171717 primary;
+ * dark mode uses #111111 background with #F7F7F4 foreground.
+ */
+export const huaqingTheme: DesktopTheme = {
+  name: 'huaqing',
+  label: 'Huaqing',
+  description: 'Warm-neutral console — compact and focused',
+  colors: {
+    background: '#F4F2EC',
+    foreground: '#171717',
+    card: '#FFFFFF',
+    cardForeground: '#171717',
+    muted: '#F7F5EF',
+    mutedForeground: '#6B6B63',
+    popover: '#FFFFFF',
+    popoverForeground: '#171717',
+    primary: '#171717',
+    primaryForeground: '#F4F2EC',
+    secondary: '#F7F5EF',
+    secondaryForeground: '#171717',
+    accent: '#EBE6DC',
+    accentForeground: '#171717',
+    border: '#E5E2DA',
+    input: '#E5E2DA',
+    ring: '#171717',
+    midground: '#171717',
+    composerRing: '#171717',
+    destructive: '#B42318',
+    destructiveForeground: '#FFFFFF',
+    sidebarBackground: '#FFFFFF',
+    sidebarBorder: '#E5E2DA',
+    userBubble: '#F7F5EF',
+    userBubbleBorder: '#E5E2DA'
+  },
+  darkColors: {
+    background: '#111111',
+    foreground: '#F7F7F4',
+    card: '#1B1B1B',
+    cardForeground: '#F7F7F4',
+    muted: '#232321',
+    mutedForeground: '#AAA69A',
+    popover: '#1B1B1B',
+    popoverForeground: '#F7F7F4',
+    primary: '#F7F7F4',
+    primaryForeground: '#111111',
+    secondary: '#232321',
+    secondaryForeground: '#F7F7F4',
+    accent: '#30302D',
+    accentForeground: '#F7F7F4',
+    border: '#30302D',
+    input: '#30302D',
+    ring: '#F7F7F4',
+    midground: '#F7F7F4',
+    composerRing: '#F7F7F4',
+    destructive: '#B42318',
+    destructiveForeground: '#FEF2F2',
+    sidebarBackground: '#161616',
+    sidebarBorder: '#30302D',
+    userBubble: '#232321',
+    userBubbleBorder: '#30302D'
+  },
+  typography: {
+    fontSans: '"MiSans", "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif, ' + EMOJI_FALLBACK,
+    fontMono: '"JetBrains Mono", ' + SYSTEM_MONO,
+    fontUrl: 'https://cdn.jsdelivr.net/npm/misans@4.0/lib/Normal/MiSans-Regular.min.css'
+  }
+}
+
 export const BUILTIN_THEMES: Record<string, DesktopTheme> = {
+  huaqing: huaqingTheme,
   nous: nousTheme,
   midnight: midnightTheme,
   ember: emberTheme,
@@ -290,4 +361,4 @@ export const BUILTIN_THEMES: Record<string, DesktopTheme> = {
 export const BUILTIN_THEME_LIST = Object.values(BUILTIN_THEMES)
 
 /** Skin used when nothing is persisted or the persisted name is retired. */
-export const DEFAULT_SKIN_NAME = 'nous'
+export const DEFAULT_SKIN_NAME = 'huaqing'

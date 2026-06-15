@@ -1,6 +1,6 @@
 import type { HermesConnection } from '@/global'
 
-export const TITLEBAR_HEIGHT = 34
+export const TITLEBAR_HEIGHT = 32
 export const MACOS_TRAFFIC_LIGHTS_HEIGHT = 14
 export const TITLEBAR_ICON_SIZE = 12
 export const TITLEBAR_CONTROL_OFFSET_X = 74

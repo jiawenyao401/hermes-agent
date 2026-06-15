@@ -1,9 +1,9 @@
 {
-  "name": "hermes",
-  "productName": "Hermes",
+  "name": "huaqing-desktop",
+  "productName": "Huaqing",
   "private": true,
   "version": "0.15.1",
-  "description": "Native desktop shell for Hermes Agent.",
+  "description": "Native desktop shell for Huaqing Agent.",
   "author": "Nous Research",
   "type": "module",
   "main": "electron/main.cjs",
@@ -134,14 +134,14 @@
   },
   "build": {
     "electronVersion": "40.9.3",
-    "appId": "com.nousresearch.hermes",
-    "productName": "Hermes",
-    "executableName": "Hermes",
+    "appId": "com.huaqing.desktop",
+    "productName": "Huaqing",
+    "executableName": "Huaqing",
     "protocols": [
       {
-        "name": "Hermes Protocol",
+        "name": "Huaqing Protocol",
         "schemes": [
-          "hermes"
+          "huaqing"
         ]
       }
     ],
