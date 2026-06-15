@@ -75,57 +75,25 @@ export function TitlebarControls({ leftTools = [], tools = [], onOpenSettings }:
   const leftEdge = panesFlipped ? fileBrowserEdge : sessionsEdge
   const rightEdge = panesFlipped ? sessionsEdge : fileBrowserEdge
 
+  // Hidden sidebar/flip buttons per design requirement
   const leftToolbarTools: TitlebarTool[] = [
-    {
-      icon: <Codicon name="layout-sidebar-left" />,
-      id: 'sidebar',
-      label: leftEdge.open ? t.titlebar.hideSidebar : t.titlebar.showSidebar,
-      onSelect: () => {
-        triggerHaptic('tap')
-        leftEdge.toggle()
-      }
-    },
-    {
-      icon: <Codicon name="arrow-swap" />,
-      id: 'flip-panes',
-      label: t.titlebar.swapSidebarSides,
-      onSelect: () => {
-        triggerHaptic('tap')
-        togglePanesFlipped()
-      },
-      title: t.titlebar.swapSidebarSidesTitle
-    },
     ...leftTools
   ]
 
+  // Hidden right sidebar toggle per design requirement
   const rightSidebarTool: TitlebarTool = {
     icon: <Codicon name="layout-sidebar-right" />,
     id: 'right-sidebar',
     label: rightEdge.open ? t.titlebar.hideRightSidebar : t.titlebar.showRightSidebar,
+    hidden: true,
     onSelect: () => {
       triggerHaptic('tap')
       rightEdge.toggle()
     }
   }
 
-  // Static system tools — always pinned to the screen's right edge.
+  // Static system tools — hidden per design requirement
   const systemTools: TitlebarTool[] = [
-    {
-      active: hapticsMuted,
-      icon: <Codicon name={hapticsMuted ? 'mute' : 'unmute'} />,
-      id: 'haptics',
-      label: hapticsMuted ? t.titlebar.unmuteHaptics : t.titlebar.muteHaptics,
-      onSelect: toggleHaptics
-    },
-    {
-      icon: <Codicon name="keyboard" />,
-      id: 'keybinds',
-      label: t.titlebar.openKeybinds,
-      onSelect: () => {
-        triggerHaptic('open')
-        toggleKeybindPanel()
-      }
-    },
     {
       icon: <Codicon name="settings-gear" />,
       id: 'settings',
