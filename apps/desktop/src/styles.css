@@ -149,7 +149,8 @@
     --theme-stroke-tertiary-accent-mix: 100%;
     --theme-stroke-quaternary-accent-mix: 100%;
     --theme-row-hover-accent-mix: 100%;
-    --theme-row-active-accent-mix: 100%;
+    --theme-row-active-accent-mix: 8%;
+    --theme-row-active-override: color-mix(in srgb, #E5E2DA 60%, transparent);
     --theme-control-hover-accent-mix: 100%;
     --theme-control-active-accent-mix: 100%;
 
@@ -212,11 +213,7 @@
       var(--ui-accent) var(--theme-row-hover-accent-mix),
       color-mix(in srgb, var(--ui-base) 3%, transparent)
     );
-    --ui-row-active-background: color-mix(
-      in srgb,
-      var(--ui-accent) var(--theme-row-active-accent-mix),
-      color-mix(in srgb, var(--ui-base) 5%, transparent)
-    );
+    --ui-row-active-background: color-mix(in srgb, #E5E2DA 50%, transparent);
     --ui-control-hover-background: color-mix(
       in srgb,
       var(--ui-accent) var(--theme-control-hover-accent-mix),
