@@ -1,0 +1,7 @@
+{
+  "name": "auth_rbac",
+  "label": "RBAC Administration",
+  "description": "Multi-user authentication and role-based access control administration",
+  "version": "1.0.0",
+  "api": "api.py"
+}

@@ -1,0 +1,6 @@
+name: auth_rbac
+version: "1.0.0"
+description: "Multi-user dashboard auth with RBAC. Replaces the basic provider with a SQLite-backed multi-user system supporting super_admin / business_admin / user roles."
+author: "Hermes Contributors"
+kind: backend
+requires_env: []
