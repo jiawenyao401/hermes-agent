@@ -316,7 +316,7 @@ async function fetchMarketplaceThemes(id) {
   }
 
   const { displayName, vsixUrl } = await resolveExtension(trimmed)
-  const vsix = await request(vsixUrl, { headers: { 'User-Agent': 'Hermes-Desktop' } })
+  const vsix = await request(vsixUrl, { headers: { 'User-Agent': 'AgentOS-Desktop' } })
   const themes = extractThemes(vsix)
 
   return { extensionId: trimmed, displayName, themes }

@@ -1,9 +1,9 @@
 {
-  "name": "hermes",
-  "productName": "Hermes",
+  "name": "huaqing-desktop",
+  "productName": "AgentOS",
   "private": true,
   "version": "0.15.1",
-  "description": "Native desktop shell for Hermes Agent.",
+  "description": "Native desktop shell for AgentOS.",
   "author": "Nous Research",
   "type": "module",
   "main": "electron/main.cjs",
@@ -136,18 +136,18 @@
   "build": {
     "electronVersion": "40.9.3",
     "electronDist": "../../node_modules/electron/dist",
-    "appId": "com.nousresearch.hermes",
-    "productName": "Hermes",
-    "executableName": "Hermes",
+    "appId": "com.huaqing.agentos",
+    "productName": "AgentOS",
+    "executableName": "AgentOS",
     "protocols": [
       {
-        "name": "Hermes Protocol",
+        "name": "AgentOS Protocol",
         "schemes": [
           "hermes"
         ]
       }
     ],
-    "artifactName": "Hermes-${version}-${os}-${arch}.${ext}",
+    "artifactName": "AgentOS-${version}-${os}-${arch}.${ext}",
     "icon": "assets/icon",
     "directories": {
       "output": "release"
@@ -188,11 +188,11 @@
       "entitlements": "electron/entitlements.mac.plist",
       "entitlementsInherit": "electron/entitlements.mac.inherit.plist",
       "extendInfo": {
-        "CFBundleDisplayName": "Hermes",
-        "CFBundleExecutable": "Hermes",
-        "CFBundleName": "Hermes",
-        "NSAudioCaptureUsageDescription": "Hermes uses audio capture for voice conversations.",
-        "NSMicrophoneUsageDescription": "Hermes uses the microphone for voice input and voice conversations."
+        "CFBundleDisplayName": "AgentOS",
+        "CFBundleExecutable": "AgentOS",
+        "CFBundleName": "AgentOS",
+        "NSAudioCaptureUsageDescription": "AgentOS uses audio capture for voice conversations.",
+        "NSMicrophoneUsageDescription": "AgentOS uses the microphone for voice input and voice conversations."
       },
       "gatekeeperAssess": false,
       "hardenedRuntime": true,
@@ -202,7 +202,7 @@
       ]
     },
     "dmg": {
-      "title": "Install Hermes",
+      "title": "Install AgentOS",
       "backgroundColor": "#f5f5f7",
       "iconSize": 96,
       "window": {
@@ -224,7 +224,7 @@
       ]
     },
     "win": {
-      "legalTrademarks": "Hermes",
+      "legalTrademarks": "AgentOS",
       "target": [
         "nsis",
         "msi"
@@ -234,7 +234,7 @@
     "linux": {
       "category": "Development",
       "maintainer": "Nous Research <support@nousresearch.com>",
-      "synopsis": "Native desktop shell for Hermes Agent.",
+      "synopsis": "Native desktop shell for AgentOS.",
       "target": [
         "AppImage",
         "deb",
@@ -245,8 +245,8 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "perMachine": false,
-      "shortcutName": "Hermes",
-      "uninstallDisplayName": "Hermes",
+      "shortcutName": "AgentOS",
+      "uninstallDisplayName": "AgentOS",
       "warningsAsErrors": false
     }
   }
