@@ -36,6 +36,6 @@ exports.default = async function afterPack(context) {
     await stampExeIdentity(exe, desktopRoot)
   } catch (err) {
     // Never fail the build over a cosmetic stamp.
-    console.warn(`[after-pack] exe identity stamp failed (${err.message}); Hermes.exe keeps the stock Electron icon`)
+    console.warn(`[after-pack] exe identity stamp failed (${err.message}); AgentOS.exe keeps the stock Electron icon`)
   }
 }
