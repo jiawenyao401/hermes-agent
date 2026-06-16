@@ -11,8 +11,7 @@ import {
   getLogs,
   getStatus,
   getUsageAnalytics,
-  restartGateway,
-  updateHermes
+  restartGateway
 } from '@/hermes'
 import type { ActionStatusResponse, AnalyticsResponse, StatusResponse } from '@/hermes'
 import { useI18n } from '@/i18n'
@@ -224,11 +223,11 @@ export function CommandCenterView({ initialSection, onClose, onDeleteSession, on
   const sessionListHasResults = filteredSessions.length > 0
 
   const runSystemAction = useCallback(
-    async (kind: 'restart' | 'update') => {
+    async () => {
       setSystemError('')
 
       try {
-        const started = kind === 'restart' ? await restartGateway() : await updateHermes()
+        const started = await restartGateway()
         let nextStatus: ActionStatusResponse | null = null
 
         for (let attempt = 0; attempt < 18; attempt += 1) {
@@ -394,11 +393,8 @@ export function CommandCenterView({ initialSection, onClose, onDeleteSession, on
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
-                        <Button onClick={() => void runSystemAction('restart')} size="xs" variant="text">
+                        <Button onClick={() => void runSystemAction()} size="xs" variant="text">
                           {cc.restartMessaging}
-                        </Button>
-                        <Button onClick={() => void runSystemAction('update')} size="xs" variant="textStrong">
-                          {cc.updateHermes}
                         </Button>
                       </div>
                     </div>

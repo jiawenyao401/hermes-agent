@@ -37,6 +37,7 @@ import { Tip } from '@/components/ui/tooltip'
 import { searchSessions, type SessionInfo, type SessionSearchResult } from '@/hermes'
 import { useWorktreeInfo } from '@/hooks/use-worktree-info'
 import { useI18n } from '@/i18n'
+import { agentOSMessagingPlatformGroupId, agentOSMessagingPlatformSortValue } from '@/lib/messaging-platforms'
 import { profileColor } from '@/lib/profile-color'
 import { sessionMatchesSearch } from '@/lib/session-search'
 import { normalizeSessionSource, sessionSourceLabel } from '@/lib/session-source'
@@ -601,7 +602,7 @@ export function ChatSidebar({
     const bySource = new Map<string, SessionInfo[]>()
 
     for (const session of messagingSessions) {
-      const sourceId = normalizeSessionSource(session.source)
+      const sourceId = agentOSMessagingPlatformGroupId(normalizeSessionSource(session.source))
 
       if (!sourceId) {
         continue
@@ -629,7 +630,7 @@ export function ChatSidebar({
           total
         }
       })
-      .sort((a, b) => sessionTime(b.sessions[0]) - sessionTime(a.sessions[0]))
+      .sort((a, b) => agentOSMessagingPlatformSortValue(a.sourceId) - agentOSMessagingPlatformSortValue(b.sourceId))
   }, [messagingSessions, messagingPlatformTotals, messagingTruncated])
 
   // ALL-profiles view: one collapsible group per profile, color on the header

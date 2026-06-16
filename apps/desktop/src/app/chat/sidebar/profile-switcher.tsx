@@ -20,7 +20,6 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useStore } from '@nanostores/react'
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
@@ -34,7 +33,6 @@ import { cn } from '@/lib/utils'
 import {
   $activeGatewayProfile,
   $profileColors,
-  $profileCreateRequest,
   $profileOrder,
   $profiles,
   $profileScope,
@@ -49,10 +47,8 @@ import {
 } from '@/store/profile'
 import type { ProfileInfo } from '@/types/hermes'
 
-import { CreateProfileDialog } from '../../profiles/create-profile-dialog'
 import { DeleteProfileDialog } from '../../profiles/delete-profile-dialog'
 import { RenameProfileDialog } from '../../profiles/rename-profile-dialog'
-import { PROFILES_ROUTE } from '../../routes'
 
 const RAIL_GAP = 4 // px — matches gap-1 between squares.
 
@@ -65,8 +61,7 @@ const DRAG_TRANSITION = `transform 200ms ${SPRING}`
 
 // The rail is a single horizontal strip of fixed cells. Pin drags to the x-axis
 // (no cross-axis scrollbar), snap to whole cells so a square steps slot-to-slot
-// instead of gliding, and clamp to the occupied strip so it can't float past the
-// last profile onto the "+".
+// instead of gliding, and clamp to the occupied strip.
 const stepThroughCells: Modifier = ({ containerNodeRect, draggingNodeRect, transform }) => {
   if (!draggingNodeRect || !containerNodeRect) {
     return { ...transform, y: 0 }
@@ -81,10 +76,9 @@ const stepThroughCells: Modifier = ({ containerNodeRect, draggingNodeRect, trans
 }
 
 // Arc-Spaces-style profile rail at the sidebar foot: a default↔all toggle pinned
-// left, the colored named profiles scrolling between, and Manage pinned right.
+// left, with colored named profiles scrolling between.
 // The active profile pops in its own color — the "where am I" cue. Single-
-// profile users see the "+" (create their first profile) and the Manage
-// overflow (edit the default profile's SOUL.md); the colored named squares
+// profile users only see the active default profile; the colored named squares
 // and the default↔all toggle only appear once a second profile exists.
 export function ProfileRail() {
   const { t } = useI18n()
@@ -94,9 +88,7 @@ export function ProfileRail() {
   const gatewayProfile = useStore($activeGatewayProfile)
   const order = useStore($profileOrder)
   const colors = useStore($profileColors)
-  const navigate = useNavigate()
 
-  const [createOpen, setCreateOpen] = useState(false)
   const [pendingRename, setPendingRename] = useState<null | ProfileInfo>(null)
   const [pendingDelete, setPendingDelete] = useState<null | ProfileInfo>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -180,20 +172,6 @@ export function ProfileRail() {
     void refreshActiveProfile()
   }, [])
 
-  // Open the create dialog when the `profile.create` hotkey fires (the dialog
-  // state lives here, so the global keybind bumps a request atom we watch).
-  const createRequest = useStore($profileCreateRequest)
-  const lastCreateRef = useRef(createRequest)
-
-  useEffect(() => {
-    if (createRequest === lastCreateRef.current) {
-      return
-    }
-
-    lastCreateRef.current = createRequest
-    setCreateOpen(true)
-  }, [createRequest])
-
   return (
     <div aria-label="Profiles" className="flex items-center gap-0.5" role="tablist">
       {/* One button toggles default ↔ all: home face when scoped to a profile,
@@ -238,7 +216,7 @@ export function ProfileRail() {
           >
             <SortableContext items={named.map(profile => profile.name)} strategy={horizontalListSortingStrategy}>
               {/* relative → the strip is the dragged square's offsetParent, so the
-                  clamp modifier bounds drags to the occupied cells (not the +). */}
+                  clamp modifier bounds drags to the occupied cells. */}
               <div className="relative flex items-center gap-1">
                 {named.map(profile => (
                   <ProfileSquare
@@ -257,35 +235,7 @@ export function ProfileRail() {
           </DndContext>
         )}
 
-        <Tip label={p.newProfile}>
-          <button
-            aria-label={p.newProfile}
-            className="grid size-5 shrink-0 place-items-center rounded-[3px] text-(--ui-text-tertiary) opacity-55 transition hover:bg-(--ui-control-hover-background) hover:text-foreground hover:opacity-100"
-            onClick={() => setCreateOpen(true)}
-            type="button"
-          >
-            <Codicon name="add" size="0.75rem" />
-          </button>
-        </Tip>
       </div>
-
-      {/* Always reachable, even with only the default profile: the manage
-          overlay is the only place to edit a profile's SOUL.md, and a
-          single-profile user must be able to edit the default's persona
-          without first creating a throwaway second profile. */}
-      <ProfilePill active={false} glyph="ellipsis" label={p.manageProfiles} onSelect={() => navigate(PROFILES_ROUTE)} />
-
-      {/* Land in the new profile on a fresh chat (selectProfile triggers the
-          new-session reset), not stuck on the session you were just in. */}
-      <CreateProfileDialog
-        onClose={() => setCreateOpen(false)}
-        onCreated={async name => {
-          await refreshActiveProfile()
-          selectProfile(name)
-        }}
-        open={createOpen}
-        profiles={profiles}
-      />
 
       <RenameProfileDialog
         currentName={pendingRename?.name ?? ''}

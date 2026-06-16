@@ -15,6 +15,7 @@ import {
 } from '@/hermes'
 import { type Translations, useI18n } from '@/i18n'
 import { AlertTriangle, ExternalLink, Save, Trash2 } from '@/lib/icons'
+import { filterAgentOSMessagingPlatforms } from '@/lib/messaging-platforms'
 import { cn } from '@/lib/utils'
 import { notify, notifyError } from '@/store/notifications'
 
@@ -112,7 +113,7 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
 
     try {
       const result = await getMessagingPlatforms()
-      setPlatforms(result.platforms)
+      setPlatforms(filterAgentOSMessagingPlatforms(result.platforms))
     } catch (err) {
       if (!silent) {
         notifyError(err, m.loadFailed)

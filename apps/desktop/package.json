@@ -20,6 +20,8 @@
     "start": "npm run build && electron .",
     "build": "node scripts/assert-root-install.cjs && node scripts/write-build-stamp.cjs && node scripts/stage-native-deps.cjs && tsc -b && vite build && npm run postbuild",
     "postbuild": "node scripts/assert-dist-built.cjs",
+    "icons:rounded": "node scripts/generate-rounded-icons.cjs",
+    "dist:clients": "node scripts/build-clients.cjs",
     "prebuilder": "node scripts/patch-electron-builder-mac-binary.cjs",
     "builder": "cross-env NODE_OPTIONS=--max-old-space-size=16384 electron-builder",
     "pack": "npm run build && npm run builder -- --dir",
