@@ -626,6 +626,11 @@ export interface Translations {
     loadingStatus: string
     recentLogs: string
     noLogs: string
+    signOut: string
+    signOutBusy: string
+    signOutSuccessTitle: string
+    signOutSuccessMessage: string
+    signOutFailed: string
     days: (count: number) => string
     statSessions: string
     statApiCalls: string

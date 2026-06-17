@@ -25,6 +25,12 @@ declare global {
       // a running subagent's session.
       openSessionWindow: (sessionId: string, opts?: { watch?: boolean }) => Promise<{ ok: boolean; error?: string }>
       getBootProgress: () => Promise<DesktopBootProgress>
+      enterpriseAuth: {
+        getStatus: () => Promise<DesktopEnterpriseAuthStatus>
+        beginLogin: () => Promise<{ ok: boolean; url: string }>
+        logout: () => Promise<DesktopEnterpriseAuthStatus>
+        onChanged: (callback: (payload: DesktopEnterpriseAuthStatus) => void) => () => void
+      }
       getConnectionConfig: (profile?: null | string) => Promise<DesktopConnectionConfig>
       saveConnectionConfig: (payload: DesktopConnectionConfigInput) => Promise<DesktopConnectionConfig>
       applyConnectionConfig: (payload: DesktopConnectionConfigInput) => Promise<DesktopConnectionConfig>
@@ -282,6 +288,14 @@ export interface DesktopConnectionConfig {
   remoteTokenPreview: string | null
   remoteTokenSet: boolean
   remoteUrl: string
+}
+
+export interface DesktopEnterpriseAuthStatus {
+  authorized: boolean
+  authorizedAt: number | null
+  gatewayUrl: string
+  sessionTokenPreview: string | null
+  username: string | null
 }
 
 export interface DesktopConnectionConfigInput {

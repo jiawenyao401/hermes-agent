@@ -21,6 +21,7 @@ import { exportSession } from '@/lib/session-export'
 import { cn } from '@/lib/utils'
 import { upsertDesktopActionTask } from '@/store/activity'
 import { $pinnedSessionIds, pinSession, unpinSession } from '@/store/layout'
+import { notify, notifyError } from '@/store/notifications'
 import { $sessions, sessionPinId } from '@/store/session'
 
 import { useRefreshHotkey } from '../hooks/use-refresh-hotkey'
@@ -126,11 +127,13 @@ export function CommandCenterView({ initialSection, onClose, onDeleteSession, on
   const [systemLoading, setSystemLoading] = useState(false)
   const [systemError, setSystemError] = useState('')
   const [systemAction, setSystemAction] = useState<ActionStatusResponse | null>(null)
+  const [signingOut, setSigningOut] = useState(false)
   const [usagePeriod, setUsagePeriod] = useState<UsagePeriod>(30)
   const [usage, setUsage] = useState<AnalyticsResponse | null>(null)
   const [usageLoading, setUsageLoading] = useState(false)
   const [usageError, setUsageError] = useState('')
   const usageRequestRef = useRef(0)
+  const [enterpriseAuthed, setEnterpriseAuthed] = useState(false)
 
   const debouncedQuery = useDebouncedValue(query.trim(), 180)
 
@@ -222,6 +225,39 @@ export function CommandCenterView({ initialSection, onClose, onDeleteSession, on
 
   const sessionListHasResults = filteredSessions.length > 0
 
+  useEffect(() => {
+    let cancelled = false
+
+    const load = async () => {
+      const auth = window.hermesDesktop?.enterpriseAuth
+      if (!auth?.getStatus) {
+        return
+      }
+
+      try {
+        const status = await auth.getStatus()
+        if (!cancelled) {
+          setEnterpriseAuthed(Boolean(status.authorized))
+        }
+      } catch {
+        if (!cancelled) {
+          setEnterpriseAuthed(false)
+        }
+      }
+    }
+
+    void load()
+
+    const unsubscribe = window.hermesDesktop?.enterpriseAuth?.onChanged?.(payload => {
+      setEnterpriseAuthed(Boolean(payload.authorized))
+    })
+
+    return () => {
+      cancelled = true
+      unsubscribe?.()
+    }
+  }, [])
+
   const runSystemAction = useCallback(
     async () => {
       setSystemError('')
@@ -262,6 +298,28 @@ export function CommandCenterView({ initialSection, onClose, onDeleteSession, on
     },
     [cc, refreshSystem]
   )
+
+  const signOut = useCallback(async () => {
+    const auth = window.hermesDesktop?.enterpriseAuth
+    if (!auth?.logout) {
+      return
+    }
+
+    setSigningOut(true)
+    try {
+      await auth.logout()
+      notify({
+        kind: 'success',
+        title: cc.signOutSuccessTitle,
+        message: cc.signOutSuccessMessage
+      })
+      onClose()
+    } catch (error) {
+      notifyError(error, cc.signOutFailed)
+    } finally {
+      setSigningOut(false)
+    }
+  }, [cc, onClose])
 
   return (
     <OverlayView closeLabel={cc.close} onClose={onClose}>
@@ -393,6 +451,11 @@ export function CommandCenterView({ initialSection, onClose, onDeleteSession, on
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+                        {enterpriseAuthed ? (
+                          <Button disabled={signingOut} onClick={() => void signOut()} size="xs" variant="outline">
+                            {signingOut ? cc.signOutBusy : cc.signOut}
+                          </Button>
+                        ) : null}
                         <Button onClick={() => void runSystemAction()} size="xs" variant="text">
                           {cc.restartMessaging}
                         </Button>

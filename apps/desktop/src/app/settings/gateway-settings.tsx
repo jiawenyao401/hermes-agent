@@ -18,7 +18,6 @@ type AuthMode = 'oauth' | 'token'
 type ProbeStatus = 'idle' | 'probing' | 'done' | 'error'
 
 const LOCKED_GATEWAY_SETTINGS = true
-const LOCKED_GATEWAY_URL = 'http://124.174.29.142:9119'
 
 interface GatewaySettingsState {
   envOverride: boolean
@@ -35,9 +34,9 @@ const EMPTY_STATE: GatewaySettingsState = {
   mode: 'remote',
   remoteAuthMode: 'token',
   remoteOauthConnected: false,
-  remoteTokenPreview: '...3Li-w',
-  remoteTokenSet: true,
-  remoteUrl: LOCKED_GATEWAY_URL
+  remoteTokenPreview: null,
+  remoteTokenSet: false,
+  remoteUrl: ''
 }
 
 function ModeCard({
@@ -156,9 +155,9 @@ export function GatewaySettings() {
                 mode: 'remote',
                 remoteAuthMode: 'token',
                 remoteOauthConnected: false,
-                remoteTokenPreview: config.remoteTokenPreview ?? '...3Li-w',
-                remoteTokenSet: true,
-                remoteUrl: LOCKED_GATEWAY_URL
+                remoteTokenPreview: config.remoteTokenPreview ?? null,
+                remoteTokenSet: config.remoteTokenSet,
+                remoteUrl: config.remoteUrl
               }
             : config
         )
@@ -307,7 +306,7 @@ export function GatewaySettings() {
     profile: scope ?? undefined,
     remoteAuthMode: LOCKED_GATEWAY_SETTINGS ? 'token' : authMode,
     remoteToken: authMode === 'token' ? remoteToken.trim() || undefined : undefined,
-    remoteUrl: LOCKED_GATEWAY_SETTINGS ? LOCKED_GATEWAY_URL : trimmedUrl
+    remoteUrl: trimmedUrl
   })
 
   const save = async (apply: boolean) => {
@@ -393,6 +392,12 @@ export function GatewaySettings() {
     setSigningIn(true)
 
     try {
+      if (LOCKED_GATEWAY_SETTINGS && window.hermesDesktop?.enterpriseAuth?.logout) {
+        await window.hermesDesktop.enterpriseAuth.logout()
+        notify({ kind: 'success', title: '已退出登录', message: '企业授权已清除，客户端将回到待授权页。' })
+        return
+      }
+
       await window.hermesDesktop.oauthLogoutConnectionConfig(trimmedUrl || undefined)
       const refreshed = await window.hermesDesktop.getConnectionConfig(scope)
       setState(refreshed)
@@ -601,27 +606,39 @@ export function GatewaySettings() {
         {state.mode === 'remote' && authResolved && authMode === 'token' ? (
           <ListRow
             action={
-              <Input
-                autoComplete="off"
-                className={cn('h-8 font-mono', CONTROL_TEXT)}
-                disabled={state.envOverride || LOCKED_GATEWAY_SETTINGS}
-                onChange={event => {
-                  if (!LOCKED_GATEWAY_SETTINGS) {
-                    setRemoteToken(event.target.value)
+              LOCKED_GATEWAY_SETTINGS ? (
+                <div className="flex items-center gap-2">
+                  <Pill tone="primary">
+                    <Check className="size-3" /> 已授权
+                  </Pill>
+                  <Button disabled={signingIn || state.envOverride} onClick={() => void signOut()} variant="outline">
+                    {signingIn ? <Loader2 className="animate-spin" /> : null}
+                    退出登录
+                  </Button>
+                </div>
+              ) : (
+                <Input
+                  autoComplete="off"
+                  className={cn('h-8 font-mono', CONTROL_TEXT)}
+                  disabled={state.envOverride || LOCKED_GATEWAY_SETTINGS}
+                  onChange={event => {
+                    if (!LOCKED_GATEWAY_SETTINGS) {
+                      setRemoteToken(event.target.value)
+                    }
+                  }}
+                  placeholder={
+                    LOCKED_GATEWAY_SETTINGS
+                      ? '已内置会话 token'
+                      : state.remoteTokenSet
+                        ? g.existingToken(state.remoteTokenPreview ?? g.savedToken)
+                        : g.pasteSessionToken
                   }
-                }}
-                placeholder={
-                  LOCKED_GATEWAY_SETTINGS
-                    ? '已内置会话 token'
-                    : state.remoteTokenSet
-                      ? g.existingToken(state.remoteTokenPreview ?? g.savedToken)
-                      : g.pasteSessionToken
-                }
-                type="password"
-                value={remoteToken}
-              />
+                  type="password"
+                  value={remoteToken}
+                />
+              )
             }
-            description={g.tokenDesc}
+            description={LOCKED_GATEWAY_SETTINGS ? '当前客户端已完成企业授权。退出后会立即清除本地授权状态，并要求重新登录。' : g.tokenDesc}
             title={g.tokenTitle}
           />
         ) : null}

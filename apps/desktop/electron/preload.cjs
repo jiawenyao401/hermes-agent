@@ -7,6 +7,16 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
   getGatewayWsUrl: profile => ipcRenderer.invoke('hermes:gateway:ws-url', profile),
   openSessionWindow: (sessionId, opts) => ipcRenderer.invoke('hermes:window:openSession', sessionId, opts),
   getBootProgress: () => ipcRenderer.invoke('hermes:boot-progress:get'),
+  enterpriseAuth: {
+    getStatus: () => ipcRenderer.invoke('hermes:enterprise-auth:get'),
+    beginLogin: () => ipcRenderer.invoke('hermes:enterprise-auth:begin-login'),
+    logout: () => ipcRenderer.invoke('hermes:enterprise-auth:logout'),
+    onChanged: callback => {
+      const listener = (_event, payload) => callback(payload)
+      ipcRenderer.on('hermes:enterprise-auth-changed', listener)
+      return () => ipcRenderer.removeListener('hermes:enterprise-auth-changed', listener)
+    }
+  },
   getConnectionConfig: profile => ipcRenderer.invoke('hermes:connection-config:get', profile),
   saveConnectionConfig: payload => ipcRenderer.invoke('hermes:connection-config:save', payload),
   applyConnectionConfig: payload => ipcRenderer.invoke('hermes:connection-config:apply', payload),

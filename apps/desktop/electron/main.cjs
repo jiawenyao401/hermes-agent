@@ -286,11 +286,18 @@ const BOOTSTRAP_COMPLETE_MARKER = path.join(ACTIVE_HERMES_ROOT, '.hermes-bootstr
 const BOOTSTRAP_MARKER_SCHEMA_VERSION = 1
 
 const DESKTOP_CONNECTION_CONFIG_PATH = path.join(app.getPath('userData'), 'connection.json')
-const LOCKED_REMOTE_GATEWAY = Object.freeze({
-  authMode: 'token',
-  token: 'L8Xxgc1BClwbD4rMRnD3uktgflgeEbNuNGUkC63Li-w',
-  url: 'http://124.174.29.142:9119'
-})
+const DESKTOP_ENTERPRISE_AUTH_PATH = path.join(app.getPath('userData'), 'enterprise-auth.json')
+const DESKTOP_ENTERPRISE_AUTH_PENDING_PATH = path.join(app.getPath('userData'), 'enterprise-auth-pending.json')
+const LOCKED_REMOTE_GATEWAY_ENABLED = true
+const DEFAULT_LOCKED_REMOTE_GATEWAY_URL = (
+  process.env.AGENTOS_DESKTOP_GATEWAY_FALLBACK_URL || 'http://124.174.29.142:9119'
+).trim()
+const DESKTOP_AUTH_REDIRECT_URI = 'hermes://agentos/gateway-callback'
+const DESKTOP_AUTH_BFF_BASE_URL = (
+  process.env.AGENTOS_DESKTOP_AUTH_BASE_URL || process.env.NEXT_PUBLIC_BFF_BASE_URL || 'http://127.0.0.1:5001'
+)
+  .trim()
+  .replace(/\/+$/, '')
 const DESKTOP_UPDATE_CONFIG_PATH = path.join(app.getPath('userData'), 'updates.json')
 // active-profile.json records which Hermes profile the desktop launches its
 // local backend as. When set, startHermes() passes `hermes --profile <name>
@@ -4184,26 +4191,244 @@ function writeActiveDesktopProfile(name) {
   return value || null
 }
 
+function readEnterpriseAuthState() {
+  try {
+    const raw = fs.readFileSync(DESKTOP_ENTERPRISE_AUTH_PATH, 'utf8')
+    const parsed = JSON.parse(raw)
+
+    if (!parsed || typeof parsed !== 'object') {
+      return { authorized: false }
+    }
+
+    const gatewayUrl = String(parsed.gatewayUrl || '').trim()
+    const sessionToken = String(parsed.sessionToken || '').trim()
+    const username = String(parsed.username || '').trim()
+    const authorizedAt = Number(parsed.authorizedAt)
+
+    return {
+      authorized: Boolean(parsed.authorized && gatewayUrl && sessionToken),
+      authorizedAt: Number.isFinite(authorizedAt) ? authorizedAt : null,
+      gatewayUrl,
+      sessionToken,
+      username: username || null
+    }
+  } catch {
+    return { authorized: false }
+  }
+}
+
+function writeEnterpriseAuthState(state) {
+  fs.mkdirSync(path.dirname(DESKTOP_ENTERPRISE_AUTH_PATH), { recursive: true })
+  writeFileAtomic(DESKTOP_ENTERPRISE_AUTH_PATH, JSON.stringify(state, null, 2))
+}
+
+function readEnterpriseAuthPendingState() {
+  try {
+    const raw = fs.readFileSync(DESKTOP_ENTERPRISE_AUTH_PENDING_PATH, 'utf8')
+    const parsed = JSON.parse(raw)
+
+    if (!parsed || typeof parsed !== 'object') {
+      return null
+    }
+
+    const state = String(parsed.state || '').trim()
+    const baseUrl = String(parsed.baseUrl || '').trim().replace(/\/+$/, '')
+    const createdAt = Number(parsed.createdAt)
+
+    if (!state || !baseUrl) {
+      return null
+    }
+
+    return {
+      baseUrl,
+      createdAt: Number.isFinite(createdAt) ? createdAt : Date.now(),
+      state
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeEnterpriseAuthPendingState(state) {
+  fs.mkdirSync(path.dirname(DESKTOP_ENTERPRISE_AUTH_PENDING_PATH), { recursive: true })
+  writeFileAtomic(DESKTOP_ENTERPRISE_AUTH_PENDING_PATH, JSON.stringify(state, null, 2))
+}
+
+function clearEnterpriseAuthPendingState() {
+  try {
+    fs.rmSync(DESKTOP_ENTERPRISE_AUTH_PENDING_PATH, { force: true })
+  } catch {
+    void 0
+  }
+}
+
+function currentLockedRemoteGateway(state = readEnterpriseAuthState()) {
+  const gatewayUrl = normalizeRemoteBaseUrl(state.gatewayUrl || DEFAULT_LOCKED_REMOTE_GATEWAY_URL)
+  const sessionToken = typeof state.sessionToken === 'string' ? state.sessionToken.trim() : ''
+
+  return {
+    authMode: 'token',
+    token: sessionToken,
+    url: gatewayUrl
+  }
+}
+
+function buildEnterpriseAuthLoginUrl() {
+  let baseUrl
+  try {
+    baseUrl = normalizeRemoteBaseUrl(DESKTOP_AUTH_BFF_BASE_URL)
+  } catch (error) {
+    throw new Error(`企业授权服务地址无效: ${error.message}`)
+  }
+
+  const state = crypto.randomBytes(16).toString('hex')
+  writeEnterpriseAuthPendingState({
+    baseUrl,
+    createdAt: Date.now(),
+    state
+  })
+
+  const params = new URLSearchParams({
+    redirect_uri: DESKTOP_AUTH_REDIRECT_URI,
+    state
+  })
+
+  return `${baseUrl}/desktop/login?${params.toString()}`
+}
+
+async function exchangeEnterpriseGatewayConfig(code, state, issuer) {
+  const pending = readEnterpriseAuthPendingState()
+  const normalizedState = String(state || '').trim()
+  const normalizedCode = String(code || '').trim()
+
+  if (!normalizedCode) {
+    throw new Error('授权回调缺少 code。')
+  }
+  if (!normalizedState) {
+    throw new Error('授权回调缺少 state。')
+  }
+  if (!pending || !pending.baseUrl || !pending.state) {
+    throw new Error('未找到待完成的授权请求，请重新发起登录。')
+  }
+  if (pending.state !== normalizedState) {
+    clearEnterpriseAuthPendingState()
+    throw new Error('授权状态校验失败，请重新登录。')
+  }
+
+  let baseUrl = pending.baseUrl
+  if (typeof issuer === 'string' && issuer.trim()) {
+    try {
+      baseUrl = normalizeRemoteBaseUrl(issuer)
+    } catch {
+      baseUrl = pending.baseUrl
+    }
+  }
+
+  try {
+    const payload = await fetchPublicJson(`${baseUrl}/desktop/gateway-config/exchange`, {
+      body: { code: normalizedCode, state: normalizedState },
+      method: 'POST',
+      timeoutMs: 12_000
+    })
+    clearEnterpriseAuthPendingState()
+    return payload
+  } catch (error) {
+    throw new Error(`交换远程网关配置失败: ${error.message}`)
+  }
+}
+
+function sanitizeEnterpriseAuthState(state = readEnterpriseAuthState()) {
+  const sessionToken = typeof state.sessionToken === 'string' ? state.sessionToken.trim() : ''
+  const gatewayUrl = typeof state.gatewayUrl === 'string' ? state.gatewayUrl.trim() : ''
+
+  return {
+    authorized: Boolean(state.authorized && gatewayUrl && sessionToken),
+    authorizedAt: Number.isFinite(state.authorizedAt) ? state.authorizedAt : null,
+    gatewayUrl,
+    sessionTokenPreview: sessionToken ? tokenPreview(sessionToken) : null,
+    username: typeof state.username === 'string' && state.username.trim() ? state.username.trim() : null
+  }
+}
+
+function notifyEnterpriseAuthChanged() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return
+  }
+
+  try {
+    mainWindow.webContents.send('hermes:enterprise-auth-changed', sanitizeEnterpriseAuthState())
+  } catch (error) {
+    rememberLog(`[enterprise-auth] notify failed: ${error.message}`)
+  }
+}
+
+function persistEnterpriseGatewayConfig(gatewayUrl, sessionToken) {
+  const existing = readDesktopConnectionConfig()
+  const next = {
+    mode: 'remote',
+    remote: {
+      authMode: 'token',
+      token: { encoding: 'plain', value: sessionToken },
+      url: normalizeRemoteBaseUrl(gatewayUrl)
+    },
+    profiles: existing.profiles || {}
+  }
+  writeDesktopConnectionConfig(next)
+}
+
+function completeEnterpriseAuthorization({ gatewayUrl, sessionToken, username }) {
+  const fallbackGateway = currentLockedRemoteGateway()
+  const resolvedGatewayUrl = normalizeRemoteBaseUrl(gatewayUrl || fallbackGateway.url)
+  const resolvedSessionToken = String(sessionToken || fallbackGateway.token).trim()
+
+  if (!resolvedSessionToken) {
+    throw new Error('Missing enterprise session token.')
+  }
+
+  persistEnterpriseGatewayConfig(resolvedGatewayUrl, resolvedSessionToken)
+  writeEnterpriseAuthState({
+    authorized: true,
+    authorizedAt: Date.now(),
+    gatewayUrl: resolvedGatewayUrl,
+      sessionToken: resolvedSessionToken,
+      username: String(username || '').trim() || null
+    })
+  clearEnterpriseAuthPendingState()
+  notifyEnterpriseAuthChanged()
+}
+
+function clearEnterpriseAuthorization() {
+  try {
+    fs.rmSync(DESKTOP_ENTERPRISE_AUTH_PATH, { force: true })
+  } catch {
+    void 0
+  }
+  clearEnterpriseAuthPendingState()
+  notifyEnterpriseAuthChanged()
+}
+
 function lockedRemoteGatewayConfig(profile = null) {
+  const gateway = currentLockedRemoteGateway()
   return {
     envOverride: false,
     mode: 'remote',
     profile: connectionScopeKey(profile),
-    remoteAuthMode: LOCKED_REMOTE_GATEWAY.authMode,
+    remoteAuthMode: gateway.authMode,
     remoteOauthConnected: false,
-    remoteTokenPreview: tokenPreview(LOCKED_REMOTE_GATEWAY.token),
-    remoteTokenSet: true,
-    remoteUrl: LOCKED_REMOTE_GATEWAY.url
+    remoteTokenPreview: tokenPreview(gateway.token),
+    remoteTokenSet: Boolean(gateway.token),
+    remoteUrl: gateway.url
   }
 }
 
 function lockedRemoteGatewayRawConfig() {
+  const gateway = currentLockedRemoteGateway()
   return {
     mode: 'remote',
     remote: {
-      authMode: LOCKED_REMOTE_GATEWAY.authMode,
-      token: { encoding: 'plain', value: LOCKED_REMOTE_GATEWAY.token },
-      url: LOCKED_REMOTE_GATEWAY.url
+      authMode: gateway.authMode,
+      token: { encoding: 'plain', value: gateway.token },
+      url: gateway.url
     },
     profiles: {}
   }
@@ -4214,7 +4439,7 @@ function lockedRemoteGatewayRawConfig() {
 // behavior); with a `profile` it describes that profile's per-profile remote
 // override (or an empty "local/inherit" view when the profile has none).
 async function sanitizeDesktopConnectionConfig(config = readDesktopConnectionConfig(), profile = null) {
-  if (LOCKED_REMOTE_GATEWAY) {
+  if (LOCKED_REMOTE_GATEWAY_ENABLED) {
     return lockedRemoteGatewayConfig(profile)
   }
 
@@ -4379,15 +4604,14 @@ async function buildRemoteConnection(rawUrl, authMode, token, source) {
 // A null/empty profile resolves the env/global remote, so legacy callers and
 // the connection test (which pass no profile) are unchanged.
 async function resolveRemoteBackend(profile) {
-  if (LOCKED_REMOTE_GATEWAY) {
+  if (LOCKED_REMOTE_GATEWAY_ENABLED) {
     void profile
+    const gateway = currentLockedRemoteGateway()
+    if (!gateway.token) {
+      throw new Error('企业授权尚未完成，请先登录 AgentOS。')
+    }
 
-    return buildRemoteConnection(
-      LOCKED_REMOTE_GATEWAY.url,
-      LOCKED_REMOTE_GATEWAY.authMode,
-      LOCKED_REMOTE_GATEWAY.token,
-      'locked'
-    )
+    return buildRemoteConnection(gateway.url, gateway.authMode, gateway.token, 'locked')
   }
 
   const config = readDesktopConnectionConfig()
@@ -4440,7 +4664,7 @@ function configuredRemoteProfileNames() {
 // Remote, or the env override): a SINGLE remote backend serves every profile via
 // ?profile=. Distinct from per-profile overrides — here there's one host for all.
 function globalRemoteActive() {
-  if (LOCKED_REMOTE_GATEWAY) {
+  if (LOCKED_REMOTE_GATEWAY_ENABLED) {
     return true
   }
 
@@ -4529,10 +4753,10 @@ async function probeRemoteAuthMode(rawUrl) {
 }
 
 async function testDesktopConnectionConfig(input = {}) {
-  const config = LOCKED_REMOTE_GATEWAY
+  const config = LOCKED_REMOTE_GATEWAY_ENABLED
     ? lockedRemoteGatewayRawConfig()
     : coerceDesktopConnectionConfig(input, readDesktopConnectionConfig(), { persistToken: false })
-  const key = LOCKED_REMOTE_GATEWAY ? null : connectionScopeKey(input.profile)
+  const key = LOCKED_REMOTE_GATEWAY_ENABLED ? null : connectionScopeKey(input.profile)
   // The block under test: a per-profile entry or the global remote. Coerce has
   // already normalized the URL and resolved token inheritance for the scope.
   const block = key ? config.profiles?.[key] || null : config.remote
@@ -5440,6 +5664,23 @@ ipcMain.handle('hermes:bootstrap:cancel', async () => {
 })
 ipcMain.handle('hermes:boot-progress:get', async () => bootProgressState)
 ipcMain.handle('hermes:bootstrap:get', async () => getBootstrapState())
+ipcMain.handle('hermes:enterprise-auth:get', async () => sanitizeEnterpriseAuthState())
+ipcMain.handle('hermes:enterprise-auth:begin-login', async () => {
+  const loginUrl = buildEnterpriseAuthLoginUrl()
+  const opened = openExternalUrl(loginUrl)
+
+  if (!opened) {
+    throw new Error(`Could not open enterprise login page: ${loginUrl}`)
+  }
+
+  return { ok: true, url: loginUrl }
+})
+ipcMain.handle('hermes:enterprise-auth:logout', async () => {
+  await teardownPrimaryBackendAndWait()
+  clearEnterpriseAuthorization()
+  mainWindow?.reload()
+  return sanitizeEnterpriseAuthState()
+})
 ipcMain.handle('hermes:connection-config:get', async (_event, profile) =>
   sanitizeDesktopConnectionConfig(readDesktopConnectionConfig(), profile)
 )
@@ -5463,7 +5704,7 @@ ipcMain.handle('hermes:connection-config:oauth-logout', async (_event, rawUrl) =
   return { ok: true, connected: baseUrl ? await hasLiveOauthSession(baseUrl) : false }
 })
 ipcMain.handle('hermes:connection-config:save', async (_event, payload) => {
-  if (LOCKED_REMOTE_GATEWAY) {
+  if (LOCKED_REMOTE_GATEWAY_ENABLED) {
     return sanitizeDesktopConnectionConfig(lockedRemoteGatewayRawConfig(), payload?.profile)
   }
 
@@ -5473,7 +5714,7 @@ ipcMain.handle('hermes:connection-config:save', async (_event, payload) => {
   return sanitizeDesktopConnectionConfig(config, payload?.profile)
 })
 ipcMain.handle('hermes:connection-config:apply', async (_event, payload) => {
-  if (LOCKED_REMOTE_GATEWAY) {
+  if (LOCKED_REMOTE_GATEWAY_ENABLED) {
     await teardownPrimaryBackendAndWait()
     mainWindow?.reload()
 
@@ -6459,7 +6700,7 @@ function _extractDeepLink(argv) {
   return argv.find(a => typeof a === 'string' && a.startsWith(`${HERMES_PROTOCOL}://`)) || null
 }
 
-function handleDeepLink(url) {
+async function handleDeepLink(url) {
   if (!url || typeof url !== 'string') return
   let parsed
   try {
@@ -6475,6 +6716,26 @@ function handleDeepLink(url) {
   parsed.searchParams.forEach((v, k) => {
     params[k] = v
   })
+  if (kind === 'agentos' && name === 'gateway-callback') {
+    try {
+      const config = await exchangeEnterpriseGatewayConfig(params.code, params.state, params.issuer)
+      completeEnterpriseAuthorization({
+        gatewayUrl: config?.remote_url,
+        sessionToken: config?.session_token,
+        username: null
+      })
+      await teardownPrimaryBackendAndWait()
+      mainWindow?.reload()
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        if (mainWindow.isMinimized()) mainWindow.restore()
+        mainWindow.focus()
+      }
+      rememberLog('[enterprise-auth] authorization completed')
+    } catch (error) {
+      rememberLog(`[enterprise-auth] authorization failed: ${error.message}`)
+    }
+    return
+  }
   const payload = { kind, name, params }
 
   if (!_rendererReadyForDeepLink || !mainWindow || mainWindow.isDestroyed()) {
