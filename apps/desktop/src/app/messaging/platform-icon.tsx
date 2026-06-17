@@ -17,10 +17,11 @@ import type { ComponentType, SVGProps } from 'react'
 import { Globe, Link as LinkIcon, MessageSquareText } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
-// We render simpleicons.org brand glyphs for platforms whose owners publish a
-// usable mark (telegram, discord, matrix, ...). A few brands — Slack, Dingtalk,
-// Feishu, WeCom — have been removed from Simple Icons at the brand owner's
-// request, so we fall back to a colored letter monogram for those.
+// We render local app-icon assets for China-market platforms where product
+// provided exact marks, and simpleicons.org brand glyphs for platforms whose
+// owners publish a usable mark (telegram, discord, matrix, ...). A few brands
+// have been removed from Simple Icons at the brand owner's request, so the
+// fallback monogram remains for any platform without a local asset.
 //
 // `iconColor` is the brand's hex from simpleicons.org so we can paint each
 // glyph in its native color on top of a soft tint. The fallback monogram uses
@@ -30,11 +31,18 @@ type IconKind = 'brand' | 'generic'
 interface PlatformIconSpec {
   Icon?: ComponentType<SVGProps<SVGSVGElement>>
   color: string
+  imageSrc?: string
   kind: IconKind
   monogram?: string
 }
 
+const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`
+
 const PLATFORM_ICONS: Record<string, PlatformIconSpec> = {
+  dingtalk: { color: '#1F9FF2', imageSrc: assetPath('messaging-icons/dingtalk.png'), kind: 'brand' },
+  feishu: { color: '#1F7BFF', imageSrc: assetPath('messaging-icons/feishu.png'), kind: 'brand' },
+  wecom: { color: '#1688F0', imageSrc: assetPath('messaging-icons/wecom.png'), kind: 'brand' },
+  wecom_callback: { color: '#1688F0', imageSrc: assetPath('messaging-icons/wecom.png'), kind: 'brand' },
   telegram: { Icon: SiTelegram, color: '#26A5E4', kind: 'brand' },
   discord: { Icon: SiDiscord, color: '#5865F2', kind: 'brand' },
   // Slack removed from Simple Icons by Salesforce request — letter monogram.
@@ -76,7 +84,15 @@ export function PlatformAvatar({ className, platformId, platformName }: Platform
     )
   }
 
-  const { Icon, color } = spec
+  const { Icon, color, imageSrc } = spec
+
+  if (imageSrc) {
+    return (
+      <span aria-hidden="true" className={cn(baseClass, 'overflow-hidden bg-transparent')}>
+        <img alt="" className="size-full rounded-[inherit] object-cover" draggable={false} src={imageSrc} />
+      </span>
+    )
+  }
 
   return (
     <span

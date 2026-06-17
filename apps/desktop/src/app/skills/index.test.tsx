@@ -40,10 +40,20 @@ function toolset(overrides: Record<string, unknown> = {}) {
   }
 }
 
-function renderSkills() {
+function skill(overrides: Record<string, unknown> = {}) {
+  return {
+    name: 'codex',
+    description: 'Delegate coding to OpenAI Codex CLI',
+    enabled: true,
+    category: 'autonomous-ai-agents',
+    ...overrides
+  }
+}
+
+function renderSkills(initialEntry = '/skills?tab=toolsets') {
   return import('./index').then(({ SkillsView }) =>
     render(
-      <MemoryRouter initialEntries={['/skills?tab=toolsets']}>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <SkillsView />
       </MemoryRouter>
     )
@@ -63,6 +73,31 @@ afterEach(() => {
 })
 
 describe('SkillsView toolset management', () => {
+  it('renders mapped Chinese labels for skill categories', async () => {
+    getSkills.mockResolvedValue([
+      skill({ category: 'autonomous-ai-agents' }),
+      skill({
+        name: 'repo-tools',
+        category: 'github',
+        description: 'GitHub workflows'
+      })
+    ])
+
+    await renderSkills('/skills')
+
+    expect((await screen.findAllByText('自主智能体')).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText('GitHub / 代码托管')).length).toBeGreaterThan(0)
+    expect(screen.queryByText('Autonomous Ai Agents')).toBeNull()
+  })
+
+  it('keeps unmapped skill categories on the existing pretty label fallback', async () => {
+    getSkills.mockResolvedValue([skill({ category: 'new-category' })])
+
+    await renderSkills('/skills')
+
+    expect((await screen.findAllByText('New-Category')).length).toBeGreaterThan(0)
+  })
+
   it('renders a switch for each toolset and toggles it off', async () => {
     await renderSkills()
 
