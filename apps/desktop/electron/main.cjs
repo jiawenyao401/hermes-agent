@@ -63,6 +63,7 @@ const {
   cookiesHaveLiveSession,
   normAuthMode,
   normalizeRemoteBaseUrl,
+  pathWithGlobalRemoteProfile,
   profileRemoteOverride,
   resolveAuthMode,
   resolveTestWsUrl,
@@ -5177,31 +5178,43 @@ function createSessionWindow(sessionId, { watch = false } = {}) {
       }
     })
 
-    if (IS_MAC) {
-      win.setWindowButtonPosition?.(WINDOW_BUTTON_POSITION)
-    }
+  if (IS_MAC) {
+    win.setWindowButtonPosition?.(WINDOW_BUTTON_POSITION)
+  }
 
-    win.once('ready-to-show', () => {
-      if (!win.isDestroyed()) win.show()
-    })
-
-    win.on('will-enter-full-screen', () => sendWindowStateChanged(true))
-    win.on('enter-full-screen', () => sendWindowStateChanged(true))
-    win.on('will-leave-full-screen', () => sendWindowStateChanged(false))
-    win.on('leave-full-screen', () => sendWindowStateChanged(false))
-
-    wireCommonWindowHandlers(win)
-
-    win.loadURL(
-      buildSessionWindowUrl(sessionId, {
-        devServer: DEV_SERVER,
-        rendererIndexPath: DEV_SERVER ? undefined : resolveRendererIndex(),
-        watch
-      })
-    )
-
-    return win
+  win.once('ready-to-show', () => {
+    if (!win.isDestroyed()) win.show()
   })
+
+  win.on('will-enter-full-screen', () => sendWindowStateChanged(true))
+  win.on('enter-full-screen', () => sendWindowStateChanged(true))
+  win.on('will-leave-full-screen', () => sendWindowStateChanged(false))
+  win.on('leave-full-screen', () => sendWindowStateChanged(false))
+
+  wireCommonWindowHandlers(win)
+
+  win.loadURL(
+    buildSessionWindowUrl(sessionId, {
+      devServer: DEV_SERVER,
+      rendererIndexPath: DEV_SERVER ? undefined : resolveRendererIndex(),
+      watch,
+      newSession
+    })
+  )
+
+  return win
+}
+
+// Open (or focus) a standalone window for a single chat session.
+function createSessionWindow(sessionId, { watch = false } = {}) {
+  return sessionWindows.openOrFocus(sessionId, () => spawnSecondaryWindow({ sessionId, watch }))
+}
+
+// Open a fresh compact window on the new-session draft (#/). Not registry-keyed:
+// like ⌘N in a browser, every press opens a new window — and a draft window that
+// later converts to a real session must not get refocused as if it were blank.
+function createNewSessionWindow() {
+  return spawnSecondaryWindow({ newSession: true })
 }
 
 function createWindow() {
@@ -5385,6 +5398,11 @@ ipcMain.handle('hermes:window:openSession', async (_event, sessionId, opts) => {
   }
 
   createSessionWindow(sessionId.trim(), { watch: opts?.watch === true })
+
+  return { ok: true }
+})
+ipcMain.handle('hermes:window:openNewSession', async () => {
+  createNewSessionWindow()
 
   return { ok: true }
 })
@@ -5668,9 +5686,14 @@ ipcMain.handle('hermes:api', async (_event, request) => {
 
   await prepareProfileDeleteRequest(request)
 
-  const connection = await ensureBackend(request?.profile)
+  const profile = request?.profile
+  const connection = await ensureBackend(profile)
   const timeoutMs = resolveTimeoutMs(request?.timeoutMs, DEFAULT_FETCH_TIMEOUT_MS)
-  const url = `${connection.baseUrl}${request.path}`
+  const requestPath = pathWithGlobalRemoteProfile(request.path, profile, {
+    globalRemote: globalRemoteActive(),
+    profileRemoteOverride: profileHasRemoteOverride(profile)
+  })
+  const url = `${connection.baseUrl}${requestPath}`
   // OAuth gateways authenticate REST via the HttpOnly session cookie held in
   // the OAuth partition — route through Electron's net stack bound to that
   // session so the cookie attaches automatically. Token/local modes keep using
