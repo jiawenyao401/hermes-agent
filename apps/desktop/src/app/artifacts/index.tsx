@@ -35,8 +35,9 @@ import { sessionRoute } from '../routes'
 import type { SetStatusbarItemGroup } from '../shell/statusbar-controls'
 
 type ArtifactKind = 'image' | 'file' | 'link'
-type ArtifactFilter = 'all' | ArtifactKind
-const ARTIFACT_FILTERS: readonly ArtifactFilter[] = ['all', 'image', 'file', 'link']
+type VisibleArtifactKind = Exclude<ArtifactKind, 'link'>
+type ArtifactFilter = 'all' | VisibleArtifactKind
+const ARTIFACT_FILTERS: readonly ArtifactFilter[] = ['all', 'image', 'file']
 
 interface ArtifactRecord {
   id: string
@@ -363,8 +364,19 @@ interface ArtifactColumn {
   width: (filter: ArtifactFilter) => string
 }
 
-const itemsLabel = (f: ArtifactFilter, a: Translations['artifacts']) =>
-  f === 'link' ? a.itemsLink : f === 'file' ? a.itemsFile : a.itemsGeneric
+function isVisibleArtifact(artifact: ArtifactRecord): boolean {
+  return artifact.kind !== 'link'
+}
+
+export function artifactTabCounts(artifacts: readonly ArtifactRecord[]) {
+  const visibleArtifacts = artifacts.filter(isVisibleArtifact)
+
+  return {
+    all: visibleArtifacts.length,
+    file: visibleArtifacts.filter(artifact => artifact.kind === 'file').length,
+    image: visibleArtifacts.filter(artifact => artifact.kind === 'image').length
+  }
+}
 
 interface ArtifactsViewProps extends React.ComponentProps<'section'> {
   setStatusbarItemGroup?: SetStatusbarItemGroup
@@ -429,6 +441,10 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
     const q = query.trim().toLowerCase()
 
     return artifacts.filter(artifact => {
+      if (!isVisibleArtifact(artifact)) {
+        return false
+      }
+
       if (kindFilter !== 'all' && artifact.kind !== kindFilter) {
         return false
       }
@@ -451,7 +467,7 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
   )
 
   const visibleFileArtifacts = useMemo(
-    () => visibleArtifacts.filter(artifact => artifact.kind !== 'image'),
+    () => visibleArtifacts.filter(artifact => artifact.kind === 'file'),
     [visibleArtifacts]
   )
 
@@ -471,14 +487,7 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
   )
 
   const counts = useMemo(() => {
-    const all = artifacts || []
-
-    return {
-      all: all.length,
-      image: all.filter(artifact => artifact.kind === 'image').length,
-      file: all.filter(artifact => artifact.kind === 'file').length,
-      link: all.filter(artifact => artifact.kind === 'link').length
-    }
+    return artifactTabCounts(artifacts || [])
   }, [artifacts])
 
   const openArtifact = useCallback(async (href: string) => {
@@ -540,9 +549,6 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
           <TextTab active={kindFilter === 'file'} onClick={() => setKindFilter('file')}>
             {a.tabFiles} <TextTabMeta>({counts.file})</TextTabMeta>
           </TextTab>
-          <TextTab active={kindFilter === 'link'} onClick={() => setKindFilter('link')}>
-            {a.tabLinks} <TextTabMeta>({counts.link})</TextTabMeta>
-          </TextTab>
         </>
       }
     >
@@ -601,7 +607,7 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
                 >
                   <ArtifactsPagination
                     className="ml-auto justify-end px-0"
-                    itemLabel={itemsLabel(kindFilter, a)}
+                    itemLabel={a.itemsFile}
                     onPageChange={setFilePage}
                     page={currentFilePage}
                     pageSize={100}
@@ -843,24 +849,23 @@ const ARTIFACT_COLUMNS: readonly ArtifactColumn[] = [
   {
     Cell: PrimaryCell,
     bodyClassName: 'p-0',
-    header: (filter, a) => (filter === 'link' ? a.colTitleLink : filter === 'file' ? a.colTitleFile : a.colTitleDefault),
+    header: (filter, a) => (filter === 'file' ? a.colTitleFile : a.colTitleDefault),
     id: 'primary',
-    width: filter => (filter === 'link' ? 'w-[50%]' : 'w-[35%]')
+    width: () => 'w-[35%]'
   },
   {
     Cell: LocationCell,
     bodyClassName: 'px-2.5 py-1.5',
-    header: (filter, a) =>
-      filter === 'link' ? a.colLocationLink : filter === 'file' ? a.colLocationFile : a.colLocationDefault,
+    header: (filter, a) => (filter === 'file' ? a.colLocationFile : a.colLocationDefault),
     id: 'location',
-    width: filter => (filter === 'link' ? 'w-[30%]' : 'w-[41%]')
+    width: () => 'w-[41%]'
   },
   {
     Cell: SessionCell,
     bodyClassName: 'p-0',
     header: (_filter, a) => a.colSession,
     id: 'session',
-    width: filter => (filter === 'link' ? 'w-[20%]' : 'w-[24%]')
+    width: () => 'w-[24%]'
   }
 ]
 
