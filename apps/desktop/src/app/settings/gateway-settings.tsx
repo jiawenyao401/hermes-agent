@@ -18,7 +18,7 @@ type AuthMode = 'oauth' | 'token'
 type ProbeStatus = 'idle' | 'probing' | 'done' | 'error'
 
 const LOCKED_GATEWAY_SETTINGS = true
-const LOCKED_GATEWAY_URL = 'http://124.174.29.142:9119'
+const LOCKED_GATEWAY_URL = 'http://124.174.29.142:9122'
 
 interface GatewaySettingsState {
   envOverride: boolean

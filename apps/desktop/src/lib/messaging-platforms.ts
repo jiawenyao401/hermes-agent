@@ -12,11 +12,11 @@ const PLATFORM_ALIASES: Record<string, (typeof AGENTOS_PLATFORM_ORDER)[number]> 
 }
 
 const PLATFORM_LABELS: Record<(typeof AGENTOS_PLATFORM_ORDER)[number], string> = {
-  dingtalk: 'DingTalk',
-  feishu: 'Feishu / Lark',
-  qqbot: 'QQ Bot',
-  wecom: 'WeCom',
-  weixin: 'WeChat'
+  dingtalk: '钉钉',
+  feishu: '飞书',
+  qqbot: '腾讯QQ',
+  wecom: '企业微信',
+  weixin: '微信'
 }
 
 const PLATFORM_ORDER = new Map(AGENTOS_PLATFORM_ORDER.map((id, index) => [id, index]))
