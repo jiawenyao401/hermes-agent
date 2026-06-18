@@ -2602,6 +2602,11 @@ def _tool_summary(name: str, result: str, duration_s: float | None) -> str | Non
         if n is not None:
             text = f"Extracted {n} {'page' if n == 1 else 'pages'}"
 
+    elif name == "video_generate" and isinstance(data, dict):
+        video = str(data.get("video") or "").strip()
+        if data.get("success") and video:
+            text = "Generated video"
+
     if isinstance(data, dict) and data.get("fallback_warning"):
         warning = str(data.get("fallback_warning") or "").strip()
         if warning:
@@ -3707,7 +3712,8 @@ def _history_to_messages(history: list[dict]) -> list[dict]:
         if role not in {"user", "assistant", "tool", "system"}:
             continue
         content_text = _coerce_message_text(m.get("content"))
-        if role == "assistant" and m.get("tool_calls"):
+        has_tool_calls = role == "assistant" and bool(m.get("tool_calls"))
+        if has_tool_calls:
             for tc in m["tool_calls"]:
                 fn = tc.get("function", {})
                 tc_id = tc.get("id", "")
@@ -3717,16 +3723,21 @@ def _history_to_messages(history: list[dict]) -> list[dict]:
                     except (json.JSONDecodeError, TypeError):
                         args = {}
                     tool_call_args[tc_id] = (fn["name"], args)
-            if not content_text.strip():
-                continue
         if role == "tool":
             tc_id = m.get("tool_call_id", "")
             tc_info = tool_call_args.get(tc_id) if tc_id else None
             name = (tc_info[0] if tc_info else None) or m.get("tool_name") or "tool"
             args = (tc_info[1] if tc_info else None) or {}
-            messages.append(
-                {"role": "tool", "name": name, "context": _tool_ctx(name, args)}
-            )
+            msg = {
+                "role": "tool",
+                "name": name,
+                "tool_name": name,
+                "context": _tool_ctx(name, args),
+                "content": m.get("content"),
+            }
+            if tc_id:
+                msg["tool_call_id"] = tc_id
+            messages.append(msg)
             continue
         # An assistant turn may carry only reasoning/thinking content with no
         # visible text (extended-thinking turns, thinking-only recovery
@@ -3744,10 +3755,12 @@ def _history_to_messages(history: list[dict]) -> list[dict]:
         has_reasoning = role == "assistant" and any(
             m.get(key) for key in reasoning_keys
         )
-        if not content_text.strip() and not has_reasoning:
+        if not content_text.strip() and not has_reasoning and not has_tool_calls:
             continue
         msg = {"role": role, "text": content_text}
         if role == "assistant":
+            if has_tool_calls:
+                msg["tool_calls"] = m.get("tool_calls")
             for key in reasoning_keys:
                 if key in m and m.get(key) is not None:
                     msg[key] = m.get(key)

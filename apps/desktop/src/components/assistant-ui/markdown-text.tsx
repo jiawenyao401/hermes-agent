@@ -134,7 +134,7 @@ function OpenMediaButton({ kind, path }: { kind: 'audio' | 'video'; path: string
   )
 }
 
-function MediaAttachment({ path }: { path: string }) {
+export function MediaAttachment({ path }: { path: string }) {
   const [src, setSrc] = useState('')
   const [failed, setFailed] = useState(false)
   const kind = mediaKind(path)
@@ -273,6 +273,10 @@ function MarkdownLink({ children, className, href, ...props }: ComponentProps<'a
 }
 
 function MarkdownImage({ className, src, alt, ...props }: ComponentProps<'img'>) {
+  if (src && mediaKind(src) === 'video') {
+    return <MediaAttachment path={src} />
+  }
+
   return (
     <ZoomableImage
       alt={alt}

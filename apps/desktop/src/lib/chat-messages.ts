@@ -636,8 +636,10 @@ function applyStoredToolResultToParts(parts: ChatMessagePart[], toolMessage: Ses
 
 function storedToolMessagePart(toolMessage: SessionMessage, fallbackIndex: number): ChatMessagePart {
   const name = toolMessage.tool_name || toolMessage.name || 'tool'
-  const context = textFromUnknown(toolMessage.context || toolMessage.text || toolMessage.content || '')
+  const context = textFromUnknown(toolMessage.context || '')
+  const resultContent = toolMessage.content ?? toolMessage.text ?? toolMessage.context ?? ''
   const args = context ? { context } : {}
+  const result = parseStoredToolResult(resultContent)
 
   return {
     type: 'tool-call',
@@ -645,7 +647,7 @@ function storedToolMessagePart(toolMessage: SessionMessage, fallbackIndex: numbe
     toolName: name,
     args: args as never,
     argsText: Object.keys(args).length ? JSON.stringify(args) : '',
-    result: context ? { context } : {},
+    result: result || (context ? { context } : {}),
     isError: false
   }
 }

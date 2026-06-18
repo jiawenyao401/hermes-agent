@@ -5,6 +5,7 @@ import { useStore } from '@nanostores/react'
 import { createContext, type FC, type PropsWithChildren, type ReactNode, useContext, useMemo } from 'react'
 
 import { AnsiText } from '@/components/assistant-ui/ansi-text'
+import { MediaAttachment } from '@/components/assistant-ui/markdown-text'
 import { useElapsedSeconds } from '@/components/chat/activity-timer'
 import { ActivityTimerText } from '@/components/chat/activity-timer-text'
 import { CompactMarkdown } from '@/components/chat/compact-markdown'
@@ -274,6 +275,7 @@ function ToolEntry({ part }: ToolEntryProps) {
 
   const hasExpandableContent = Boolean(
     (view.previewTarget && isPreviewableTarget(view.previewTarget)) ||
+    view.mediaPath ||
     view.imageUrl ||
     view.inlineDiff ||
     showDetail ||
@@ -374,6 +376,7 @@ function ToolEntry({ part }: ToolEntryProps) {
               <ZoomableImage alt={copy.outputAlt} className="h-auto w-full object-cover" src={view.imageUrl} />
             </div>
           )}
+          {view.mediaPath && <MediaAttachment path={view.mediaPath} />}
           {hasSearchHits && view.searchHits && (
             <div className="max-w-full text-xs leading-relaxed text-(--ui-text-secondary)">
               {searchResultsLabel && <p className={TOOL_SECTION_LABEL_CLASS}>{searchResultsLabel}</p>}

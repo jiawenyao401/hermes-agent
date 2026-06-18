@@ -128,6 +128,53 @@ describe('toChatMessages', () => {
     expect(chatMessageText(message)).toBe('Here you go.')
   })
 
+  it('keeps generated video results on hydrated tool rows', () => {
+    const [message] = toChatMessages([
+      {
+        content: '',
+        role: 'assistant',
+        timestamp: 1,
+        tool_calls: [{ id: 'video-1', function: { name: 'video_generate', arguments: '{"prompt":"puppy"}' } }]
+      },
+      {
+        content: '{"success":true,"video":"/Users/me/.hermes/cache/videos/puppy.mp4"}',
+        role: 'tool',
+        timestamp: 2,
+        tool_call_id: 'video-1',
+        tool_name: 'video_generate'
+      }
+    ])
+
+    const toolPart = message.parts.find(
+      (part): part is Extract<ChatMessagePart, { type: 'tool-call' }> =>
+        part.type === 'tool-call' && part.toolName === 'video_generate'
+    )
+
+    expect(toolPart?.result).toMatchObject({
+      success: true,
+      video: '/Users/me/.hermes/cache/videos/puppy.mp4'
+    })
+  })
+
+  it('parses standalone generated video tool messages as results, not context', () => {
+    const [message] = toChatMessages([
+      {
+        content: '{"success":true,"video":"https://example.com/puppy.mp4"}',
+        context: 'puppy',
+        role: 'tool',
+        timestamp: 1,
+        tool_name: 'video_generate'
+      }
+    ])
+
+    const [toolPart] = message.parts as Extract<ChatMessagePart, { type: 'tool-call' }>[]
+
+    expect(toolPart.result).toMatchObject({
+      success: true,
+      video: 'https://example.com/puppy.mp4'
+    })
+  })
+
   it('coerces non-string message content without throwing', () => {
     const [message] = toChatMessages([
       {
