@@ -289,7 +289,7 @@ const DESKTOP_CONNECTION_CONFIG_PATH = path.join(app.getPath('userData'), 'conne
 const LOCKED_REMOTE_GATEWAY = Object.freeze({
   authMode: 'token',
   token: 'vk4dO4OxwD5RkAlQcUYgq6Y4IPhcWzvQMSfOA2DH2Wc',
-  url: 'http://124.174.29.142:9122'
+  url: 'http://192.168.1.100:9122'
 })
 const DESKTOP_UPDATE_CONFIG_PATH = path.join(app.getPath('userData'), 'updates.json')
 // active-profile.json records which Hermes profile the desktop launches its
