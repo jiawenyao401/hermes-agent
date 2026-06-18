@@ -118,6 +118,30 @@ export function useGatewayBoot({
       }
     }
 
+    const connectGateway = async (conn: HermesConnection): Promise<HermesConnection> => {
+      publish(conn)
+      const wsUrl = await resolveGatewayWsUrl(desktop, conn)
+
+      try {
+        await gateway.connect(wsUrl)
+
+        return conn
+      } catch (error) {
+        if (conn.mode !== 'remote' || conn.authMode === 'oauth') {
+          throw error
+        }
+
+        gateway.close()
+        await desktop.revalidateConnection?.().catch(() => undefined)
+        const refreshed = await desktop.getConnection(conn.profile ?? $activeGatewayProfile.get())
+        publish(refreshed)
+        const refreshedWsUrl = await resolveGatewayWsUrl(desktop, refreshed)
+        await gateway.connect(refreshedWsUrl)
+
+        return refreshed
+      }
+    }
+
     const attemptReconnect = async () => {
       if (cancelled || reconnecting || gatewayOpen()) {
         return
@@ -139,7 +163,6 @@ export function useGatewayBoot({
           return
         }
 
-        publish(conn)
         // Re-mint the WS URL before reconnecting. OAuth tickets are single-use
         // with a short TTL, so the ticket baked into the cached conn.wsUrl is
         // dead on every reconnect after the initial boot — reusing it surfaces
@@ -147,8 +170,7 @@ export function useGatewayBoot({
         // mints a fresh ticket (or throws a reauth error in OAuth mode rather
         // than connecting with a stale one). For local/token gateways the URL
         // carries a long-lived token and the re-mint is a cheap no-op.
-        const wsUrl = await resolveGatewayWsUrl(desktop, conn)
-        await gateway.connect(wsUrl)
+        await connectGateway(conn)
 
         if (cancelled) {
           return
@@ -326,14 +348,12 @@ export function useGatewayBoot({
           message: translateNow('boot.steps.connectingGateway'),
           progress: 95
         })
-        publish(conn)
         // Mint a fresh WS URL right before connecting. For OAuth gateways the
         // ticket is single-use with a short TTL, so the ticket baked into
         // conn.wsUrl is stale; resolveGatewayWsUrl() re-mints it and, on
         // failure, throws a reauth error rather than connecting with a dead
         // ticket (which would surface as an opaque "connection closed").
-        const wsUrl = await resolveGatewayWsUrl(desktop, conn)
-        await gateway.connect(wsUrl)
+        await connectGateway(conn)
 
         if (cancelled) {
           return
@@ -359,10 +379,12 @@ export function useGatewayBoot({
         })
         await ensureDefaultWorkspaceCwd()
         const remoteDefault = await desktopDefaultCwd().catch(() => null)
+
         if (remoteDefault?.cwd && !$activeSessionId.get() && !$currentCwd.get()) {
           setCurrentCwd(remoteDefault.cwd)
           setCurrentBranch(remoteDefault.branch || '')
         }
+
         await callbacksRef.current.refreshHermesConfig()
 
         if (cancelled) {

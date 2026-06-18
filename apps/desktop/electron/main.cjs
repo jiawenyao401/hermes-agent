@@ -20,7 +20,6 @@ const crypto = require('node:crypto')
 const fs = require('node:fs')
 const http = require('node:http')
 const https = require('node:https')
-const net = require('node:net')
 const path = require('node:path')
 const { pathToFileURL } = require('node:url')
 const { execFileSync, spawn } = require('node:child_process')
@@ -34,7 +33,7 @@ const {
 } = require('./session-windows.cjs')
 const { canImportHermesCli, verifyHermesCli } = require('./backend-probes.cjs')
 const { probeGatewayWebSocket } = require('./gateway-ws-probe.cjs')
-const { adoptServedDashboardToken } = require('./dashboard-token.cjs')
+const { adoptServedDashboardToken, resolveServedDashboardToken } = require('./dashboard-token.cjs')
 const { waitForDashboardPort } = require('./backend-ready.cjs')
 const { serializeJsonBody, setJsonRequestHeaders } = require('./oauth-net-request.cjs')
 const { fetchMarketplaceThemes, searchMarketplaceThemes } = require('./vscode-marketplace.cjs')
@@ -289,8 +288,8 @@ const BOOTSTRAP_MARKER_SCHEMA_VERSION = 1
 const DESKTOP_CONNECTION_CONFIG_PATH = path.join(app.getPath('userData'), 'connection.json')
 const LOCKED_REMOTE_GATEWAY = Object.freeze({
   authMode: 'token',
-  token: 'L8Xxgc1BClwbD4rMRnD3uktgflgeEbNuNGUkC63Li-w',
-  url: 'http://124.174.29.142:9119'
+  token: 'vk4dO4OxwD5RkAlQcUYgq6Y4IPhcWzvQMSfOA2DH2Wc',
+  url: 'http://124.174.29.142:9122'
 })
 const DESKTOP_UPDATE_CONFIG_PATH = path.join(app.getPath('userData'), 'updates.json')
 // active-profile.json records which Hermes profile the desktop launches its
@@ -4038,6 +4037,17 @@ async function freshGatewayWsUrl(profile) {
     const ticket = await mintGatewayWsTicket(connection.baseUrl)
     return buildGatewayWsUrlWithTicket(connection.baseUrl, ticket)
   }
+  if (connection.mode === 'remote' && connection.authMode === 'token') {
+    const token = await refreshRemoteGatewayToken(connection.baseUrl, connection.token, {
+      persist: connection.source === 'settings' || connection.source === 'profile',
+      profile: connection.source === 'profile' ? profile || primaryProfileKey() : null,
+      source: `ws-${connection.source || 'remote'}`
+    })
+    if (token && token !== connection.token) {
+      connection.token = token
+      connection.wsUrl = buildGatewayWsUrl(connection.baseUrl, token)
+    }
+  }
   // Local/token: the cached wsUrl already carries the (long-lived) token.
   return connection.wsUrl
 }
@@ -4268,6 +4278,51 @@ function buildRemoteBlock(remoteUrl, authMode, token) {
   return { url: normalizeRemoteBaseUrl(remoteUrl), authMode, token }
 }
 
+async function refreshRemoteGatewayToken(rawUrl, fallbackToken, options = {}) {
+  const baseUrl = normalizeRemoteBaseUrl(rawUrl)
+  const currentToken = String(fallbackToken || '')
+  const source = options.source || 'remote'
+  const token = await resolveServedDashboardToken(baseUrl, currentToken, {
+    rememberLog: line => rememberLog(line.replace('[boot]', `[remote:${source}]`)),
+    timeoutMs: 8_000
+  }).catch(error => {
+    rememberLog(`[remote:${source}] could not refresh gateway token from ${baseUrl}/: ${error.message}`)
+    return currentToken
+  })
+
+  if (!token || token === currentToken || options.persist !== true || LOCKED_REMOTE_GATEWAY) {
+    return token
+  }
+
+  const config = readDesktopConnectionConfig()
+  const key = connectionScopeKey(options.profile)
+  try {
+    if (key) {
+      const entry = config.profiles?.[key]
+      if (entry && entry.mode === 'remote' && normAuthMode(entry.authMode) !== 'oauth') {
+        writeDesktopConnectionConfig({
+          ...config,
+          profiles: {
+            ...(config.profiles || {}),
+            [key]: { ...entry, token: encryptDesktopSecret(token) }
+          }
+        })
+        rememberLog(`[remote:${source}] saved refreshed gateway token for profile "${key}"`)
+      }
+    } else if (config.mode === 'remote' && normAuthMode(config.remote?.authMode) !== 'oauth') {
+      writeDesktopConnectionConfig({
+        ...config,
+        remote: { ...(config.remote || {}), token: encryptDesktopSecret(token) }
+      })
+      rememberLog(`[remote:${source}] saved refreshed gateway token`)
+    }
+  } catch (error) {
+    rememberLog(`[remote:${source}] could not save refreshed gateway token: ${error.message}`)
+  }
+
+  return token
+}
+
 function coerceDesktopConnectionConfig(input = {}, existing = readDesktopConnectionConfig(), options = {}) {
   const persistToken = options.persistToken !== false
   const key = connectionScopeKey(input.profile)
@@ -4382,11 +4437,14 @@ async function buildRemoteConnection(rawUrl, authMode, token, source) {
 async function resolveRemoteBackend(profile) {
   if (LOCKED_REMOTE_GATEWAY) {
     void profile
+    const token = await refreshRemoteGatewayToken(LOCKED_REMOTE_GATEWAY.url, LOCKED_REMOTE_GATEWAY.token, {
+      source: 'locked'
+    })
 
     return buildRemoteConnection(
       LOCKED_REMOTE_GATEWAY.url,
       LOCKED_REMOTE_GATEWAY.authMode,
-      LOCKED_REMOTE_GATEWAY.token,
+      token,
       'locked'
     )
   }
@@ -4398,7 +4456,14 @@ async function resolveRemoteBackend(profile) {
   //    reaches its intended backend.
   const override = profileRemoteOverride(config, profile)
   if (override) {
-    const token = override.authMode === 'oauth' ? null : decryptDesktopSecret(override.token)
+    let token = override.authMode === 'oauth' ? null : decryptDesktopSecret(override.token)
+    if (override.authMode !== 'oauth') {
+      token = await refreshRemoteGatewayToken(override.url, token, {
+        persist: true,
+        profile,
+        source: 'profile'
+      })
+    }
     return buildRemoteConnection(override.url, override.authMode, token, 'profile')
   }
 
@@ -4406,13 +4471,14 @@ async function resolveRemoteBackend(profile) {
   const rawEnvUrl = process.env.HERMES_DESKTOP_REMOTE_URL
   const rawEnvToken = process.env.HERMES_DESKTOP_REMOTE_TOKEN
   if (rawEnvUrl) {
-    if (!rawEnvToken) {
+    const token = await refreshRemoteGatewayToken(rawEnvUrl, rawEnvToken, { source: 'env' })
+    if (!token) {
       throw new Error(
         'HERMES_DESKTOP_REMOTE_URL is set but HERMES_DESKTOP_REMOTE_TOKEN is not. ' +
-          'Both must be provided to connect to a remote AgentOS backend.'
+          'No session token could be read from the remote dashboard index.'
       )
     }
-    return buildRemoteConnection(rawEnvUrl, 'token', rawEnvToken, 'env')
+    return buildRemoteConnection(rawEnvUrl, 'token', token, 'env')
   }
 
   // 3. Global remote.
@@ -4420,7 +4486,10 @@ async function resolveRemoteBackend(profile) {
     return null
   }
   const authMode = normAuthMode(config.remote?.authMode)
-  const token = authMode === 'oauth' ? null : decryptDesktopSecret(config.remote?.token)
+  let token = authMode === 'oauth' ? null : decryptDesktopSecret(config.remote?.token)
+  if (authMode !== 'oauth') {
+    token = await refreshRemoteGatewayToken(config.remote?.url, token, { persist: true, source: 'settings' })
+  }
   return buildRemoteConnection(config.remote?.url, authMode, token, 'settings')
 }
 
@@ -4551,6 +4620,11 @@ async function testDesktopConnectionConfig(input = {}) {
     authMode = normAuthMode(block.authMode)
     if (authMode !== 'oauth') {
       token = decryptDesktopSecret(block.token)
+      token = await refreshRemoteGatewayToken(baseUrl, token, {
+        persist: !LOCKED_REMOTE_GATEWAY && key ? true : !LOCKED_REMOTE_GATEWAY && config.mode === 'remote',
+        profile: key,
+        source: 'test'
+      })
     }
   } else {
     const remote = (await resolveRemoteBackend(key)) || (await startAgentOS())
@@ -5144,39 +5218,37 @@ function focusWindow(win) {
   win.focus()
 }
 
-// Open (or focus) a standalone window for a single chat session.
-function createSessionWindow(sessionId, { watch = false } = {}) {
-  return sessionWindows.openOrFocus(sessionId, () => {
-    const icon = getAppIconPath()
-    const win = new BrowserWindow({
-      width: SESSION_WINDOW_MIN_WIDTH,
-      height: SESSION_WINDOW_MIN_HEIGHT,
-      minWidth: SESSION_WINDOW_MIN_WIDTH,
-      minHeight: SESSION_WINDOW_MIN_HEIGHT,
-      title: 'AgentOS',
-      titleBarStyle: 'hidden',
-      titleBarOverlay: getTitleBarOverlayOptions(),
-      trafficLightPosition: IS_MAC ? WINDOW_BUTTON_POSITION : undefined,
-      vibrancy: IS_MAC ? 'sidebar' : undefined,
-      opacity: windowOpacity(),
-      icon,
-      // Don't show until the renderer's first themed paint is ready. macOS
-      // `vibrancy` ignores `backgroundColor` and paints a translucent OS
-      // material (which follows the OS appearance, not the app theme), so a
-      // dark-themed app on a light-mode Mac flashes white until the renderer
-      // covers it. ready-to-show fires after the boot-time paint in
-      // themes/context.tsx, so the window appears already themed.
-      show: false,
-      backgroundColor: getWindowBackgroundColor(),
-      webPreferences: {
-        preload: path.join(__dirname, 'preload.cjs'),
-        contextIsolation: true,
-        webviewTag: true,
-        sandbox: true,
-        nodeIntegration: false,
-        devTools: true
-      }
-    })
+function spawnSecondaryWindow({ sessionId, watch, newSession } = {}) {
+  const icon = getAppIconPath()
+  const win = new BrowserWindow({
+    width: SESSION_WINDOW_MIN_WIDTH,
+    height: SESSION_WINDOW_MIN_HEIGHT,
+    minWidth: SESSION_WINDOW_MIN_WIDTH,
+    minHeight: SESSION_WINDOW_MIN_HEIGHT,
+    title: 'AgentOS',
+    titleBarStyle: 'hidden',
+    titleBarOverlay: getTitleBarOverlayOptions(),
+    trafficLightPosition: IS_MAC ? WINDOW_BUTTON_POSITION : undefined,
+    vibrancy: IS_MAC ? 'sidebar' : undefined,
+    opacity: windowOpacity(),
+    icon,
+    // Don't show until the renderer's first themed paint is ready. macOS
+    // `vibrancy` ignores `backgroundColor` and paints a translucent OS
+    // material (which follows the OS appearance, not the app theme), so a
+    // dark-themed app on a light-mode Mac flashes white until the renderer
+    // covers it. ready-to-show fires after the boot-time paint in
+    // themes/context.tsx, so the window appears already themed.
+    show: false,
+    backgroundColor: getWindowBackgroundColor(),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
+      contextIsolation: true,
+      webviewTag: true,
+      sandbox: true,
+      nodeIntegration: false,
+      devTools: true
+    }
+  })
 
   if (IS_MAC) {
     win.setWindowButtonPosition?.(WINDOW_BUTTON_POSITION)
@@ -5201,7 +5273,6 @@ function createSessionWindow(sessionId, { watch = false } = {}) {
       newSession
     })
   )
-
   return win
 }
 

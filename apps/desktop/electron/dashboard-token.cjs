@@ -16,7 +16,12 @@ async function fetchPublicText(url, options = {}) {
   }
 
   const timeoutMs = options.timeoutMs ?? DEFAULT_TOKEN_FETCH_TIMEOUT_MS
-  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) }).catch(error => {
+  const res = await fetch(url, {
+    headers: {
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+    },
+    signal: AbortSignal.timeout(timeoutMs)
+  }).catch(error => {
     if (error.name === 'TimeoutError') {
       throw new Error(`Timed out connecting to AgentOS backend after ${timeoutMs}ms`)
     }
