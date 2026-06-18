@@ -102,10 +102,12 @@ function main() {
   maybeVerifyDmg(macOut)
 
   // package.json points electronDist at this host's Electron build for fast
-  // local dev packaging. Clear it for Windows so electron-builder downloads
-  // the correct win32 x64 Electron runtime instead of trying to rename the
-  // macOS binary as AgentOS.exe.
-  npm(['run', 'builder', '--', '--win', 'nsis', '--x64', '-c.electronDist='])
+  // local dev packaging. Use a Windows-specific config that omits electronDist
+  // so electron-builder downloads the correct win32 x64 Electron runtime
+  // instead of trying to rename the macOS binary as AgentOS.exe. Do not pass
+  // `-c.electronDist=`: electron-builder 26 treats the empty string as a hook
+  // path and tries to import the project directory.
+  npm(['run', 'builder', '--', '--win', 'nsis', '--x64', '--config', 'scripts/electron-builder-win.cjs'])
   const winOut = copyArtifact(winArtifact)
   verifyFile(winOut)
 
