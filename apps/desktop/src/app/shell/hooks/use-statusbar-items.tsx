@@ -1,9 +1,9 @@
 import { useStore } from '@nanostores/react'
-import type { ReactNode } from 'react'
 import { useCallback, useMemo } from 'react'
 
 import type { CommandCenterSection } from '@/app/command-center'
 import { GatewayMenuPanel } from '@/app/shell/gateway-menu-panel'
+import { GlyphSpinner } from '@/components/ui/glyph-spinner'
 import { useI18n } from '@/i18n'
 import {
   Activity,
@@ -14,6 +14,7 @@ import {
   Hash,
   Loader2,
   Sparkles,
+  Terminal,
   Zap,
   ZapFilled
 } from '@/lib/icons'
@@ -41,11 +42,15 @@ import {
   setYoloActive
 } from '@/store/session'
 import { $subagentsBySession, activeSubagentCount } from '@/store/subagents'
-import { $desktopVersion } from '@/store/updates'
+import { $gatewayRestarting } from '@/store/system-actions'
+import {
+  $desktopVersion,
+} from '@/store/updates'
 import type { StatusResponse } from '@/types/hermes'
 
 import { CRON_ROUTE } from '../../routes'
 import type { StatusbarItem, StatusbarSelectModifiers } from '../statusbar-controls'
+import { $terminalTakeover, setTerminalTakeover } from '@/app/right-sidebar/store'
 
 interface StatusbarItemsOptions {
   agentsOpen: boolean
@@ -56,7 +61,6 @@ interface StatusbarItemsOptions {
   gatewayLogLines: readonly string[]
   gatewayState: string
   inferenceStatus: RuntimeReadinessResult | null
-  modelMenuContent?: ReactNode
   openAgents: () => void
   openCommandCenterSection: (section: CommandCenterSection) => void
   freshDraftReady: boolean
@@ -85,6 +89,7 @@ export function useStatusbarItems({
   const { t } = useI18n()
   const copy = t.shell.statusbar
   const activeSessionId = useStore($activeSessionId)
+  const terminalTakeover = useStore($terminalTakeover)
   const yoloActive = useStore($yoloActive)
   const busy = useStore($busy)
   const currentFastMode = useStore($currentFastMode)
@@ -93,6 +98,7 @@ export function useStatusbarItems({
   const currentReasoningEffort = useStore($currentReasoningEffort)
   const currentUsage = useStore($currentUsage)
   const desktopActionTasks = useStore($desktopActionTasks)
+  const gatewayRestarting = useStore($gatewayRestarting)
   const previewServerRestartStatus = useStore($previewServerRestartStatus)
   const sessionStartedAt = useStore($sessionStartedAt)
   const turnStartedAt = useStore($turnStartedAt)
@@ -222,9 +228,15 @@ export function useStatusbarItems({
         variant: 'action'
       },
       {
-        className: gatewayClassName,
-        detail: gatewayDetail,
-        icon: inferenceReady ? <Activity className="size-3" /> : <AlertCircle className="size-3" />,
+        className: gatewayRestarting ? undefined : gatewayClassName,
+        detail: gatewayRestarting ? copy.gatewayRestarting : gatewayDetail,
+        icon: gatewayRestarting ? (
+          <GlyphSpinner ariaLabel={copy.gatewayRestarting} className="size-3" />
+        ) : inferenceReady ? (
+          <Activity className="size-3" />
+        ) : (
+          <AlertCircle className="size-3" />
+        ),
         id: 'gateway-health',
         label: copy.gateway,
         menuClassName: 'w-72',
@@ -277,6 +289,7 @@ export function useStatusbarItems({
       gatewayMenuContent,
       gatewayClassName,
       gatewayDetail,
+      gatewayRestarting,
       inferenceReady,
       inferenceStatus?.reason,
       openAgents,
@@ -356,6 +369,15 @@ export function useStatusbarItems({
               variant: 'action' as const
             })
       },
+      {
+        className: `w-7 justify-center px-0${terminalTakeover ? ' bg-accent/55 text-foreground' : ''}`,
+        hidden: !chatOpen,
+        icon: <Terminal className="size-3.5" />,
+        id: 'terminal',
+        onSelect: () => setTerminalTakeover(!$terminalTakeover.get()),
+        title: terminalTakeover ? copy.hideTerminal : copy.showTerminal,
+        variant: 'action'
+      },
       clientVersionItem,
     ],
     [
@@ -363,11 +385,6 @@ export function useStatusbarItems({
       contextBar,
       contextUsage,
       copy,
-      currentFastMode,
-      currentModel,
-      currentProvider,
-      currentReasoningEffort,
-      modelMenuContent,
       sessionStartedAt,
       showYoloToggle,
       toggleYolo,

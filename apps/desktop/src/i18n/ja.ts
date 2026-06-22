@@ -147,6 +147,12 @@ export const ja = defineLocale({
     }
   },
 
+  remoteDisplayBanner: {
+    message: reason =>
+      `ソフトウェアレンダリングが有効です — リモートディスプレイを検出しました（${reason}）。ちらつきを防ぐため GPU アクセラレーションは無効化されています。`,
+    dismiss: '閉じる'
+  },
+
   titlebar: {
     hideSidebar: 'サイドバーを非表示',
     showSidebar: 'サイドバーを表示',
@@ -500,6 +506,7 @@ export const ja = defineLocale({
       checkNow: '今すぐ確認',
       checking: '確認中…',
       seeWhatsNew: '新機能を見る',
+      updateNow: '今すぐ更新',
       releaseNotes: 'リリースノート',
       onLatest: '最新バージョンです。',
       installing: '更新をインストール中です。',
@@ -701,6 +708,8 @@ export const ja = defineLocale({
       removedMessage: provider => `${provider} を削除しました。`,
       failedRemove: provider => `${provider} を削除できませんでした`,
       noProviderKeys: '利用可能なプロバイダー API キーがありません。',
+      searchKeys: 'プロバイダーを検索…',
+      noKeysMatch: '一致するプロバイダーがありません。',
       loading: 'プロバイダーを読み込み中...'
     },
     sessions: {
@@ -952,9 +961,9 @@ export const ja = defineLocale({
     disableAria: name => `${name} を無効にする`,
     platformEnabled: name => `${name} を有効にしました`,
     platformDisabled: name => `${name} を無効にしました`,
-    restartToApply: 'この変更を有効にするにはゲートウェイを再起動してください。',
+    restartToApply: 'この変更はゲートウェイの再起動後に有効になります。',
     setupSaved: name => `${name} の設定を保存しました`,
-    restartToReconnect: '新しい認証情報で再接続するにはゲートウェイを再起動してください。',
+    restartToReconnect: '新しい認証情報はゲートウェイの再起動後に有効になります。',
     keyCleared: key => `${key} をクリアしました`,
     setupUpdated: name => `${name} の設定が更新されました。`,
     failedUpdate: name => `${name} の更新に失敗しました`,
@@ -1475,7 +1484,11 @@ export const ja = defineLocale({
       pull: 'もうすぐ完了…',
       pydeps: '仕上げ中…',
       restart: 'AgentOS を再起動中…',
+      update: 'Hermes を更新中…',
+      rebuild: 'デスクトップアプリを再ビルド中…',
+      done: '更新が完了しました',
       manual: 'ターミナルから更新',
+      guiSkew: 'デスクトップアプリを更新してください',
       error: '更新が一時停止中'
     },
     checking: '更新を確認中…',
@@ -1500,6 +1513,9 @@ export const ja = defineLocale({
     manualBody:
       'AgentOS をコマンドラインからインストールしたため、更新もそこで実行されます。これをターミナルに貼り付けてください:',
     manualPickedUp: 'AgentOS は次回起動時に新しいバージョンを読み込みます。',
+    guiSkewTitle: 'デスクトップアプリを更新してください',
+    guiSkewBody:
+      'バックエンドは更新されましたが、このデスクトップアプリのパッケージは変更されていません。一致させるために Hermes デスクトップアプリ（AppImage / .deb / .rpm）を更新または再インストールしてください。',
     copy: 'コピー',
     copied: 'コピーしました',
     done: '完了',
@@ -1638,8 +1654,6 @@ export const ja = defineLocale({
     unknown: '(不明)',
     search: 'プロバイダーとモデルをフィルター...',
     noModels: 'モデルが見つかりません。',
-    persistGlobalSession: 'グローバルに保持（それ以外はこのセッションのみ）',
-    persistGlobal: 'グローバルに保持',
     addProvider: 'プロバイダーを追加',
     loadFailed: 'モデルを読み込めませんでした',
     noAuthenticatedProviders: '認証済みプロバイダーがありません。',
@@ -1665,6 +1679,7 @@ export const ja = defineLocale({
       search: 'モデルを検索',
       noModels: 'モデルが見つかりません',
       editModels: 'モデルを編集…',
+      refreshModels: 'モデルを更新',
       fast: '高速',
       medium: '中'
     },
@@ -1720,6 +1735,7 @@ export const ja = defineLocale({
       gatewayConnecting: '接続中',
       gatewayOffline: 'オフライン',
       gatewayTitle: 'AgentOS 推論ゲートウェイのステータス',
+      gatewayRestarting: '再起動中…',
       agents: 'エージェント',
       closeAgents: 'エージェントを閉じる',
       openAgents: 'エージェントを開く',
@@ -1867,6 +1883,7 @@ export const ja = defineLocale({
       refresh: '更新',
       moreActions: 'その他のアクション',
       branchNewChat: '新しいチャットでブランチ',
+      dismissError: 'エラーを閉じる',
       readAloudFailed: '読み上げに失敗しました',
       preparingAudio: '音声を準備中...',
       stopReading: '読み上げを停止',
@@ -1976,6 +1993,9 @@ export const ja = defineLocale({
     regenerateFailed: '再生成に失敗しました',
     editFailed: '編集に失敗しました',
     resumeFailed: '再開に失敗しました',
+    resumeStrandedTitle: 'このセッションを読み込めませんでした',
+    resumeStrandedBody: 'このセッションへの接続に失敗し、自動再試行も停止しました。ゲートウェイが実行中か確認してから、もう一度お試しください。',
+    resumeRetry: '再試行',
     nothingToBranch: 'ブランチするものがありません',
     branchNeedsChat: 'ブランチする前にチャットを開始または再開してください。',
     sessionBusy: 'セッションが使用中',

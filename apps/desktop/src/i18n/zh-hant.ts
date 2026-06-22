@@ -142,6 +142,11 @@ export const zhHant = defineLocale({
     }
   },
 
+  remoteDisplayBanner: {
+    message: reason => `軟體繪圖已啟用 — 偵測到遠端顯示（${reason}）。為防止畫面閃爍，已停用 GPU 加速。`,
+    dismiss: '關閉'
+  },
+
   titlebar: {
     hideSidebar: '隱藏側邊欄',
     showSidebar: '顯示側邊欄',
@@ -489,6 +494,7 @@ export const zhHant = defineLocale({
       checkNow: '立即檢查',
       checking: '檢查中…',
       seeWhatsNew: '查看新增內容',
+      updateNow: '立即更新',
       releaseNotes: '發行說明',
       onLatest: '你已是最新版本。',
       installing: '正在安裝更新。',
@@ -678,6 +684,8 @@ export const zhHant = defineLocale({
       removedMessage: provider => `${provider} 已移除。`,
       failedRemove: provider => `無法移除 ${provider}`,
       noProviderKeys: '沒有可用的提供方 API 金鑰。',
+      searchKeys: '搜尋提供方…',
+      noKeysMatch: '沒有符合的提供方。',
       loading: '正在載入提供方...'
     },
     sessions: {
@@ -857,6 +865,8 @@ export const zhHant = defineLocale({
     hermesActiveSessions: (version, count) => `AgentOS ${version} · 活躍工作階段 ${count}`,
     restartMessaging: '重新啟動訊息服務',
     updateHermes: '更新 AgentOS',
+    restartGateway: '重新啟動閘道',
+    gatewayRestartFailed: '閘道重新啟動失敗。',
     actionRunning: '執行中',
     actionDone: '完成',
     actionFailed: '失敗',
@@ -924,9 +934,9 @@ export const zhHant = defineLocale({
     disableAria: name => `停用 ${name}`,
     platformEnabled: name => `${name} 已啟用`,
     platformDisabled: name => `${name} 已停用`,
-    restartToApply: '重新啟動閘道後此變更才會生效。',
+    restartToApply: '此變更將在閘道重新啟動後生效。',
     setupSaved: name => `${name} 設定已儲存`,
-    restartToReconnect: '重新啟動閘道以使用新憑證重新連線。',
+    restartToReconnect: '新憑證將在閘道重新啟動後生效。',
     keyCleared: key => `${key} 已清除`,
     setupUpdated: name => `${name} 設定已更新。`,
     failedUpdate: name => `更新 ${name} 失敗`,
@@ -1429,7 +1439,11 @@ export const zhHant = defineLocale({
       pull: '快完成了…',
       pydeps: '收尾中…',
       restart: '正在重新啟動 AgentOS…',
+      update: '正在更新 AgentOS…',
+      rebuild: '正在重新建置桌面應用程式…',
+      done: '更新完成',
       manual: '從終端機更新',
+      guiSkew: '請更新桌面應用程式',
       error: '更新已暫停'
     },
     checking: '正在檢查更新…',
@@ -1452,6 +1466,9 @@ export const zhHant = defineLocale({
     manualTitle: '從終端機更新',
     manualBody: '您是從命令列安裝的 AgentOS，因此更新也需要在那裡執行。請將此指令貼到終端機：',
     manualPickedUp: '下次啟動 AgentOS 時會使用新版本。',
+    guiSkewTitle: '請更新桌面應用程式',
+    guiSkewBody:
+      '後端已更新，但此桌面應用程式套件未變更。請更新或重新安裝 Hermes 桌面應用程式（你的 AppImage / .deb / .rpm）以保持一致。',
     copy: '複製',
     copied: '已複製',
     done: '完成',
@@ -1582,8 +1599,6 @@ export const zhHant = defineLocale({
     unknown: '（未知）',
     search: '篩選提供方和模型...',
     noModels: '找不到模型。',
-    persistGlobalSession: '全域儲存（否則僅限此工作階段）',
-    persistGlobal: '全域儲存',
     addProvider: '新增提供方',
     loadFailed: '無法載入模型',
     noAuthenticatedProviders: '沒有已驗證的提供方。',
@@ -1609,6 +1624,7 @@ export const zhHant = defineLocale({
       search: '搜尋模型',
       noModels: '找不到模型',
       editModels: '編輯模型…',
+      refreshModels: '重新整理模型',
       fast: '快速',
       medium: '中'
     },
@@ -1664,6 +1680,7 @@ export const zhHant = defineLocale({
       gatewayConnecting: '連線中',
       gatewayOffline: '離線',
       gatewayTitle: 'AgentOS 推論閘道狀態',
+      gatewayRestarting: '重新啟動中…',
       agents: '代理',
       closeAgents: '關閉代理',
       openAgents: '開啟代理',
@@ -1809,6 +1826,7 @@ export const zhHant = defineLocale({
       refresh: '重新整理',
       moreActions: '更多動作',
       branchNewChat: '在新聊天中分支',
+      dismissError: '关闭错误',
       readAloudFailed: '朗讀失敗',
       preparingAudio: '正在準備音訊...',
       stopReading: '停止朗讀',
@@ -1916,6 +1934,9 @@ export const zhHant = defineLocale({
     regenerateFailed: '重新生成失敗',
     editFailed: '編輯失敗',
     resumeFailed: '繼續失敗',
+    resumeStrandedTitle: '無法載入此工作階段',
+    resumeStrandedBody: '與此工作階段的連線失敗，自動重試已停止。請確認閘道正在執行，然後重試。',
+    resumeRetry: '重試',
     nothingToBranch: '沒有可分支的內容',
     branchNeedsChat: '分支前請先開始或繼續一個聊天。',
     sessionBusy: '工作階段忙碌中',
