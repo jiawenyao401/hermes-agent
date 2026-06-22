@@ -10,6 +10,7 @@ import { GatewayConnectingOverlay } from '@/components/gateway-connecting-overla
 import { Pane, PaneMain } from '@/components/pane-shell'
 import { RemoteDisplayBanner } from '@/components/remote-display-banner'
 import { useMediaQuery } from '@/hooks/use-media-query'
+import { openUpdatesWindow, startUpdatePoller, stopUpdatePoller } from '@/store/updates'
 import { useSkinCommand } from '@/themes/use-skin-command'
 
 import { formatRefValue } from '../components/assistant-ui/directive-text'
@@ -29,9 +30,6 @@ import {
   $pinnedSessionIds,
   $sessionsLimit,
   bumpSessionsLimit,
-  FILE_BROWSER_DEFAULT_WIDTH,
-  FILE_BROWSER_MAX_WIDTH,
-  FILE_BROWSER_MIN_WIDTH,
   pinSession,
   setSidebarOverlayMounted,
   SIDEBAR_DEFAULT_WIDTH,
@@ -56,8 +54,8 @@ import {
   $gatewayState,
   $messages,
   $messagingSessions,
-  $resumeFailedSessionId,
   $resumeExhaustedSessionId,
+  $resumeFailedSessionId,
   $selectedStoredSessionId,
   $sessions,
   $workingSessionIds,
@@ -84,7 +82,6 @@ import {
 } from '../store/session'
 import { onSessionsChanged } from '../store/session-sync'
 import { clearSessionTodos, setSessionTodos, todoListActive } from '../store/todos'
-import { openUpdatesWindow, startUpdatePoller, stopUpdatePoller } from '../store/updates'
 import { isSecondaryWindow } from '../store/windows'
 
 import { ChatView } from './chat'
@@ -104,7 +101,6 @@ import { useKeybinds } from './hooks/use-keybinds'
 import { SIDEBAR_COLLAPSE_MEDIA_QUERY } from './layout-constants'
 import { ModelPickerOverlay } from './model-picker-overlay'
 import { ModelVisibilityOverlay } from './model-visibility-overlay'
-import { RightSidebarPane } from './right-sidebar'
 import { $terminalTakeover } from './right-sidebar/store'
 import { PersistentTerminal, TerminalSlot } from './right-sidebar/terminal/persistent'
 import { CRON_ROUTE, NEW_CHAT_ROUTE, routeSessionId, sessionRoute, SETTINGS_ROUTE } from './routes'
@@ -128,7 +124,6 @@ import { ModelMenuPanel } from './shell/model-menu-panel'
 import type { StatusbarItem } from './shell/statusbar-controls'
 import type { TitlebarTool } from './shell/titlebar-controls'
 import { useGroupRegistry } from './shell/use-group-registry'
-import { UpdatesOverlay } from './updates-overlay'
 
 const AgentsView = lazy(async () => ({ default: (await import('./agents')).AgentsView }))
 const ArtifactsView = lazy(async () => ({ default: (await import('./artifacts')).ArtifactsView }))
@@ -231,7 +226,6 @@ export function DesktopController() {
     commandCenterOpen,
     cronOpen,
     currentView,
-    openAgents,
     openCommandCenterSection,
     profilesOpen,
     settingsOpen,
@@ -527,7 +521,7 @@ export function DesktopController() {
     }
   }, [])
 
-  const { gatewayLogLines, inferenceStatus, statusSnapshot } = useStatusSnapshot(gatewayState, requestGateway)
+  const { inferenceStatus, statusSnapshot } = useStatusSnapshot(gatewayState, requestGateway)
 
   const updateActiveSessionRuntimeInfo = useCallback(
     (info: { branch?: string; cwd?: string }) => {
@@ -546,7 +540,7 @@ export function DesktopController() {
     [activeSessionIdRef, updateSessionState]
   )
 
-  const { changeSessionCwd, refreshProjectBranch } = useCwdActions({
+  const { refreshProjectBranch } = useCwdActions({
     activeSessionId,
     activeSessionIdRef,
     onSessionRuntimeInfo: updateActiveSessionRuntimeInfo,
@@ -909,15 +903,13 @@ export function DesktopController() {
   })
 
   const { leftStatusbarItems, statusbarItems } = useStatusbarItems({
-    agentsOpen,
     chatOpen,
     commandCenterOpen,
     extraLeftItems: statusbarItemGroups.flat.left,
     extraRightItems: statusbarItemGroups.flat.right,
-    gatewayLogLines,
     gatewayState,
     inferenceStatus,
-    openAgents,
+    modelMenuContent,
     freshDraftReady,
     openCommandCenterSection,
     requestGateway,
@@ -973,7 +965,6 @@ export function DesktopController() {
       <ModelPickerOverlay gateway={gatewayRef.current || undefined} onSelect={selectModel} />
       <SessionPickerOverlay onResume={resumeSession} />
       <ModelVisibilityOverlay gateway={gatewayRef.current || undefined} onOpenProviders={openProviderSettings} />
-      <UpdatesOverlay />
       <GatewayConnectingOverlay />
       <BootFailureOverlay />
       <CommandPalette />
@@ -1091,28 +1082,6 @@ export function DesktopController() {
     </Pane>
   )
 
-  const fileBrowserPane = (
-    <Pane
-      defaultOpen={false}
-      disabled={!chatOpen}
-      forceCollapsed={narrowViewport}
-      hoverReveal
-      id="file-browser"
-      key="file-browser"
-      maxWidth={FILE_BROWSER_MAX_WIDTH}
-      minWidth={FILE_BROWSER_MIN_WIDTH}
-      resizable
-      side={railSide}
-      width={FILE_BROWSER_DEFAULT_WIDTH}
-    >
-      <RightSidebarPane
-        onActivateFile={path => composer.insertContextPathInlineRef(path)}
-        onActivateFolder={path => composer.insertContextPathInlineRef(path, true)}
-        onChangeCwd={changeSessionCwd}
-      />
-    </Pane>
-  )
-
   const terminalPane = (
     <Pane
       defaultOpen
@@ -1199,13 +1168,12 @@ export function DesktopController() {
       </PaneMain>
       {/*
         Order within a side maps to column order. Default (rail on the right):
-        main | terminal | preview | file-browser. Flipped (rail on the left):
-        mirror to file-browser | preview | terminal | main so terminal stays
-        adjacent to the chat.
+        main | terminal | preview. Flipped (rail on the left):
+        mirror to preview | terminal | main so terminal stays adjacent to chat.
       */}
-      {panesFlipped ? fileBrowserPane : terminalPane}
+      {!panesFlipped ? terminalPane : null}
       {previewPane}
-      {panesFlipped ? terminalPane : fileBrowserPane}
+      {panesFlipped ? terminalPane : null}
     </AppShell>
   )
 }

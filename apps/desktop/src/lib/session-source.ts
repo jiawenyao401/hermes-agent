@@ -1,22 +1,29 @@
+import { agentOSMessagingPlatformLabel } from './messaging-platforms'
+
 const SOURCE_LABELS: Record<string, string> = {
   api_server: 'API',
   bluebubbles: 'iMessage',
   cli: 'CLI',
   codex: 'Codex',
   desktop: 'Desktop',
+  dingtalk: 'DingTalk',
   discord: 'Discord',
   email: 'Email',
+  feishu: 'Feishu / Lark',
   gateway: 'Gateway',
+  homeassistant: 'Home Assistant',
   local: 'Local',
   matrix: 'Matrix',
   mattermost: 'Mattermost',
-  qqbot: 'QQ',
+  qqbot: 'QQ Bot',
   signal: 'Signal',
   slack: 'Slack',
   sms: 'SMS',
   telegram: 'Telegram',
   tui: 'TUI',
   webhook: 'Webhook',
+  wecom: 'WeCom',
+  wecom_callback: 'WeCom',
   weixin: 'WeChat',
   whatsapp: 'WhatsApp',
   yuanbao: 'Yuanbao'
@@ -109,6 +116,12 @@ export function sessionSourceLabel(source: null | string | undefined): string | 
 
   if (!id) {
     return null
+  }
+
+  const agentOSMessagingLabel = agentOSMessagingPlatformLabel(id)
+
+  if (agentOSMessagingLabel) {
+    return agentOSMessagingLabel
   }
 
   return SOURCE_LABELS[id] || id.replace(/[_-]+/g, ' ').replace(/\b\w/g, char => char.toUpperCase())

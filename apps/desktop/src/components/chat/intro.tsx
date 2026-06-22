@@ -28,7 +28,7 @@ const FALLBACK_COPY: IntroCopy[] = [
     body: "Bring the code, question, or stuck part. I'll read the room before making changes."
   },
   {
-    headline: 'What should Hermes look at?',
+    headline: 'What should AgentOS look at?',
     body: "Send the task, failing path, or half-formed plan. I'll help turn it into action."
   },
   {
@@ -120,7 +120,7 @@ function fallbackCopyForPersonality(personalityKey: string): IntroCopy[] {
       body: "Send the task, file, or rough idea. I'll use your configured voice and keep the work grounded in this repo."
     },
     {
-      headline: `What does ${label} Hermes need to see?`,
+      headline: `What does ${label} AgentOS need to see?`,
       body: "Bring the context or the stuck part. I'll adapt to your configured personality."
     },
     {
@@ -128,7 +128,7 @@ function fallbackCopyForPersonality(personalityKey: string): IntroCopy[] {
       body: "Send the problem, file, or idea. I'll follow the personality you've configured."
     },
     {
-      headline: `What should ${label} Hermes tackle?`,
+      headline: `What should ${label} AgentOS tackle?`,
       body: "Drop the task here. I'll keep the work grounded in the repo."
     },
     {
@@ -142,7 +142,12 @@ function pickCopy(copies: IntroCopy[], seed = 0): IntroCopy {
   return copies[Math.abs(seed) % copies.length] || FALLBACK_COPY[0]
 }
 
-const WORDMARK = 'HERMES AGENT'
+const WORDMARK = 'Agent OS'
+const INTRO_BODY = '请用自己的话描述任务，我会选择合适的工具、说明执行计划，并在风险步骤前与你确认。'
+
+function localizedIntroBody(_copy: IntroCopy): string {
+  return INTRO_BODY
+}
 
 function resolveCopy(personality?: string, seed?: number): IntroCopy {
   const personalityKey = normalizeKey(personality)
@@ -157,6 +162,7 @@ function resolveCopy(personality?: string, seed?: number): IntroCopy {
 export function Intro({ personality, seed }: IntroProps) {
   const [mountSeed] = useState(() => Math.floor(Math.random() * 100000))
   const copy = resolveCopy(personality, mountSeed + (seed ?? 0))
+  const body = localizedIntroBody(copy)
 
   return (
     <div
@@ -175,7 +181,7 @@ export function Intro({ personality, seed }: IntroProps) {
           <span aria-hidden="true">{WORDMARK}</span>
         </p>
 
-        <p className="m-0 text-center leading-normal tracking-tight">{copy.body}</p>
+        <p className="m-0 text-center leading-normal tracking-tight">{body}</p>
       </div>
     </div>
   )

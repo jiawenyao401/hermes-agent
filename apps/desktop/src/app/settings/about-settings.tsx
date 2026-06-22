@@ -1,8 +1,9 @@
 import { useStore } from '@nanostores/react'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
 import { BrandMark } from '@/components/brand-mark'
 import { Button } from '@/components/ui/button'
+import type { DesktopUpdateStatus } from '@/global'
 import { type Translations, useI18n } from '@/i18n'
 import { CheckCircle2, ExternalLink, Loader2, RefreshCw, Sparkles } from '@/lib/icons'
 import { cn } from '@/lib/utils'
@@ -20,28 +21,53 @@ import {
 import { ListRow, SectionHeading, SettingsContent } from './primitives'
 import { UninstallSection } from './uninstall-section'
 
-const RELEASE_NOTES_URL = 'https://github.com/NousResearch/hermes-agent/releases'
+const RELEASE_NOTES_URL = 'https://github.com/NousResearch/Hermes-Agent/releases'
 
-function relativeTime(ms: number | undefined, a: Translations['settings']['about']) {
-  if (!ms) {
-    return a.never
+function relativeTime(timestamp: number | undefined, copy: Translations['settings']['about']): string {
+  if (!timestamp) {
+    return copy.never
   }
 
-  const diff = Date.now() - ms
+  const elapsed = Math.max(0, Date.now() - timestamp)
+  const minutes = Math.floor(elapsed / 60_000)
 
-  if (diff < 60_000) {
-    return a.justNow
+  if (minutes < 1) {
+    return copy.justNow
   }
 
-  if (diff < 3_600_000) {
-    return a.minAgo(Math.round(diff / 60_000))
+  if (minutes < 60) {
+    return copy.minAgo(minutes)
   }
 
-  if (diff < 86_400_000) {
-    return a.hoursAgo(Math.round(diff / 3_600_000))
+  const hours = Math.floor(minutes / 60)
+
+  if (hours < 24) {
+    return copy.hoursAgo(hours)
   }
 
-  return a.daysAgo(Math.round(diff / 86_400_000))
+  return copy.daysAgo(Math.floor(hours / 24))
+}
+
+function updateStatusLine(status: DesktopUpdateStatus | null, copy: Translations['settings']['about']): string {
+  if (!status) {
+    return copy.tapCheck
+  }
+
+  if (status.supported === false) {
+    return status.message || copy.cantUpdate
+  }
+
+  if (status.error) {
+    return copy.cantReach
+  }
+
+  const behind = status.behind ?? 0
+
+  if (behind > 0) {
+    return copy.updateReady(behind)
+  }
+
+  return copy.onLatest
 }
 
 export function AboutSettings() {
@@ -49,9 +75,15 @@ export function AboutSettings() {
   const a = t.settings.about
   const version = useStore($desktopVersion)
   const status = useStore($updateStatus)
-  const apply = useStore($updateApply)
   const checking = useStore($updateChecking)
-  const [justChecked, setJustChecked] = useState(false)
+  const apply = useStore($updateApply)
+  const applying = apply.applying
+  const supported = status?.supported !== false
+  const behind = status?.behind ?? 0
+  const justChecked = Boolean(status?.fetchedAt && Date.now() - status.fetchedAt < 30_000)
+  const statusLine = updateStatusLine(status, a)
+  const statusTone: 'available' | 'error' | 'idle' =
+    behind > 0 && supported && !status?.error ? 'available' : status?.error || !supported ? 'error' : 'idle'
 
   // The version atom is loaded once at app boot, which makes About show a
   // stale number after a self-update (the running binary is current, the
@@ -61,36 +93,7 @@ export function AboutSettings() {
     void refreshDesktopVersion()
   }, [])
 
-  const behind = status?.behind ?? 0
-  const supported = status?.supported !== false
-  const applying = apply.applying || apply.stage === 'restart'
-
-  const handleCheck = async () => {
-    setJustChecked(false)
-    const next = await checkUpdates()
-    setJustChecked(Boolean(next))
-  }
-
-  let statusLine: string
-  let statusTone: 'idle' | 'available' | 'error' = 'idle'
-
-  if (!supported) {
-    statusLine = status?.message ?? a.cantUpdate
-    statusTone = 'error'
-  } else if (status?.error) {
-    statusLine = a.cantReach
-    statusTone = 'error'
-  } else if (applying) {
-    statusLine = a.installing
-    statusTone = 'available'
-  } else if (behind > 0) {
-    statusLine = a.updateReady(behind)
-    statusTone = 'available'
-  } else if (status) {
-    statusLine = a.onLatest
-  } else {
-    statusLine = a.tapCheck
-  }
+  const handleCheck = () => checkUpdates()
 
   return (
     <SettingsContent>

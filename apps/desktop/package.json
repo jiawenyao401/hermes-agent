@@ -1,9 +1,9 @@
 {
-  "name": "hermes",
-  "productName": "Hermes",
+  "name": "huaqing-desktop",
+  "productName": "AgentOS",
   "private": true,
   "version": "0.17.0",
-  "description": "Native desktop shell for Hermes Agent.",
+  "description": "Native desktop shell for AgentOS.",
   "author": "Nous Research",
   "type": "module",
   "main": "electron/main.cjs",
@@ -20,6 +20,8 @@
     "start": "npm run build && electron .",
     "build": "node scripts/assert-root-install.cjs && node scripts/write-build-stamp.cjs && node scripts/stage-native-deps.cjs && tsc -b && vite build && npm run postbuild",
     "postbuild": "node scripts/assert-dist-built.cjs",
+    "icons:rounded": "node scripts/generate-rounded-icons.cjs",
+    "dist:clients": "node scripts/build-clients.cjs",
     "prebuilder": "node scripts/patch-electron-builder-mac-binary.cjs",
     "builder": "cross-env NODE_OPTIONS=--max-old-space-size=16384 node scripts/run-electron-builder.cjs",
     "pack": "npm run build && npm run builder -- --dir",
@@ -27,9 +29,9 @@
     "dist:mac": "npm run build && npm run builder -- --mac",
     "dist:mac:dmg": "npm run build && npm run builder -- --mac dmg",
     "dist:mac:zip": "npm run build && npm run builder -- --mac zip",
-    "dist:win": "npm run build && npm run builder -- --win",
-    "dist:win:msi": "npm run build && npm run builder -- --win msi",
-    "dist:win:nsis": "npm run build && npm run builder -- --win nsis",
+    "dist:win": "npm run build && npm run builder -- --win --config scripts/electron-builder-win.cjs",
+    "dist:win:msi": "npm run build && npm run builder -- --win msi --config scripts/electron-builder-win.cjs",
+    "dist:win:nsis": "npm run build && npm run builder -- --win nsis --config scripts/electron-builder-win.cjs",
     "dist:linux": "npm run build && npm run builder -- --linux AppImage deb rpm",
     "test:desktop": "node scripts/test-desktop.mjs",
     "test:desktop:all": "node scripts/test-desktop.mjs all",
@@ -128,6 +130,7 @@
     "jsdom": "^29.1.1",
     "prettier": "^3.8.3",
     "rcedit": "^5.0.2",
+    "resedit": "^3.0.2",
     "typescript": "^6.0.3",
     "vite": "^8.0.10",
     "vitest": "^4.1.5",
@@ -135,18 +138,19 @@
   },
   "build": {
     "electronVersion": "40.10.2",
-    "appId": "com.nousresearch.hermes",
-    "productName": "Hermes",
-    "executableName": "Hermes",
+    "appId": "com.huaqing.agentos",
+    "electronDist": "../../node_modules/electron/dist",
+    "productName": "AgentOS",
+    "executableName": "AgentOS",
     "protocols": [
       {
-        "name": "Hermes Protocol",
+        "name": "AgentOS Protocol",
         "schemes": [
           "hermes"
         ]
       }
     ],
-    "artifactName": "Hermes-${version}-${os}-${arch}.${ext}",
+    "artifactName": "AgentOS-${version}-${os}-${arch}.${ext}",
     "icon": "assets/icon",
     "directories": {
       "output": "release"
@@ -187,11 +191,11 @@
       "entitlements": "electron/entitlements.mac.plist",
       "entitlementsInherit": "electron/entitlements.mac.inherit.plist",
       "extendInfo": {
-        "CFBundleDisplayName": "Hermes",
-        "CFBundleExecutable": "Hermes",
-        "CFBundleName": "Hermes",
-        "NSAudioCaptureUsageDescription": "Hermes uses audio capture for voice conversations.",
-        "NSMicrophoneUsageDescription": "Hermes uses the microphone for voice input and voice conversations."
+        "CFBundleDisplayName": "AgentOS",
+        "CFBundleExecutable": "AgentOS",
+        "CFBundleName": "AgentOS",
+        "NSAudioCaptureUsageDescription": "AgentOS uses audio capture for voice conversations.",
+        "NSMicrophoneUsageDescription": "AgentOS uses the microphone for voice input and voice conversations."
       },
       "gatekeeperAssess": false,
       "hardenedRuntime": true,
@@ -201,7 +205,7 @@
       ]
     },
     "dmg": {
-      "title": "Install Hermes",
+      "title": "Install AgentOS",
       "backgroundColor": "#f5f5f7",
       "iconSize": 96,
       "window": {
@@ -223,7 +227,7 @@
       ]
     },
     "win": {
-      "legalTrademarks": "Hermes",
+      "legalTrademarks": "AgentOS",
       "target": [
         "nsis",
         "msi"
@@ -233,7 +237,7 @@
     "linux": {
       "category": "Development",
       "maintainer": "Nous Research <support@nousresearch.com>",
-      "synopsis": "Native desktop shell for Hermes Agent.",
+      "synopsis": "Native desktop shell for AgentOS.",
       "target": [
         "AppImage",
         "deb",
@@ -244,8 +248,8 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "perMachine": false,
-      "shortcutName": "Hermes",
-      "uninstallDisplayName": "Hermes",
+      "shortcutName": "AgentOS",
+      "uninstallDisplayName": "AgentOS",
       "warningsAsErrors": false
     }
   }

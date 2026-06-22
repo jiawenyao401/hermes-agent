@@ -17,6 +17,9 @@ type Mode = 'local' | 'remote'
 type AuthMode = 'oauth' | 'token'
 type ProbeStatus = 'idle' | 'probing' | 'done' | 'error'
 
+const LOCKED_GATEWAY_SETTINGS = true
+const LOCKED_GATEWAY_URL = 'http://192.168.1.100:9119'
+
 interface GatewaySettingsState {
   envOverride: boolean
   mode: Mode
@@ -29,12 +32,12 @@ interface GatewaySettingsState {
 
 const EMPTY_STATE: GatewaySettingsState = {
   envOverride: false,
-  mode: 'local',
+  mode: 'remote',
   remoteAuthMode: 'token',
   remoteOauthConnected: false,
-  remoteTokenPreview: null,
-  remoteTokenSet: false,
-  remoteUrl: ''
+  remoteTokenPreview: '...3Li-w',
+  remoteTokenSet: true,
+  remoteUrl: LOCKED_GATEWAY_URL
 }
 
 function ModeCard({
@@ -145,7 +148,20 @@ export function GatewaySettings() {
           return
         }
 
-        setState(config)
+        setState(
+          LOCKED_GATEWAY_SETTINGS
+            ? {
+                ...config,
+                envOverride: false,
+                mode: 'remote',
+                remoteAuthMode: 'token',
+                remoteOauthConnected: false,
+                remoteTokenPreview: config.remoteTokenPreview ?? '...3Li-w',
+                remoteTokenSet: true,
+                remoteUrl: LOCKED_GATEWAY_URL
+              }
+            : config
+        )
       })
       .catch(err => notifyError(err, g.failedLoad))
       .finally(() => {
@@ -163,6 +179,13 @@ export function GatewaySettings() {
   // prefers a fresh probe result over the saved value.
   const trimmedUrl = state.remoteUrl.trim()
   useEffect(() => {
+    if (LOCKED_GATEWAY_SETTINGS) {
+      setProbeStatus('idle')
+      setProbe(null)
+
+      return
+    }
+
     if (state.mode !== 'remote' || !trimmedUrl || !/^https?:\/\//i.test(trimmedUrl)) {
       setProbeStatus('idle')
       setProbe(null)
@@ -280,11 +303,11 @@ export function GatewaySettings() {
   }, [authMode, oauthConnected, remoteToken, state.remoteTokenSet, trimmedUrl])
 
   const payload = () => ({
-    mode: state.mode,
+    mode: LOCKED_GATEWAY_SETTINGS ? 'remote' : state.mode,
     profile: scope ?? undefined,
-    remoteAuthMode: authMode,
+    remoteAuthMode: LOCKED_GATEWAY_SETTINGS ? 'token' : authMode,
     remoteToken: authMode === 'token' ? remoteToken.trim() || undefined : undefined,
-    remoteUrl: trimmedUrl
+    remoteUrl: LOCKED_GATEWAY_SETTINGS ? LOCKED_GATEWAY_URL : trimmedUrl
   })
 
   const save = async (apply: boolean) => {
@@ -436,14 +459,17 @@ export function GatewaySettings() {
         <div className="flex items-center gap-2 text-[length:var(--conversation-text-font-size)] font-medium">
           <Globe className="size-4 text-muted-foreground" />
           {g.title}
+          {LOCKED_GATEWAY_SETTINGS ? <Pill tone="primary">固定远程网关</Pill> : null}
           {state.envOverride ? <Pill tone="primary">{g.envOverride}</Pill> : null}
         </div>
         <p className="mt-2 max-w-2xl text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-(--ui-text-tertiary)">
-          {g.intro}
+          {LOCKED_GATEWAY_SETTINGS
+            ? '此版本已固定使用企业远程网关，连接模式、远程 URL 和会话 token 不可在客户端修改。'
+            : g.intro}
         </p>
       </div>
 
-      {namedProfiles.length > 0 ? (
+      {namedProfiles.length > 0 && !LOCKED_GATEWAY_SETTINGS ? (
         <div className="mb-5 grid gap-2">
           <div className="text-[length:var(--conversation-caption-font-size)] font-medium text-(--ui-text-secondary)">
             {g.appliesTo}
@@ -480,18 +506,26 @@ export function GatewaySettings() {
       <div className="grid gap-3 sm:grid-cols-2">
         <ModeCard
           active={state.mode === 'local'}
-          description={g.localDesc}
-          disabled={state.envOverride}
+          description={LOCKED_GATEWAY_SETTINGS ? '此定制版本已禁用本地网关。' : g.localDesc}
+          disabled={state.envOverride || LOCKED_GATEWAY_SETTINGS}
           icon={Monitor}
-          onSelect={() => setState(current => ({ ...current, mode: 'local' }))}
+          onSelect={() => {
+            if (!LOCKED_GATEWAY_SETTINGS) {
+              setState(current => ({ ...current, mode: 'local' }))
+            }
+          }}
           title={g.localTitle}
         />
         <ModeCard
           active={state.mode === 'remote'}
-          description={g.remoteDesc}
-          disabled={state.envOverride}
+          description={LOCKED_GATEWAY_SETTINGS ? '连接到固定企业远程网关，客户端不可修改。' : g.remoteDesc}
+          disabled={state.envOverride || LOCKED_GATEWAY_SETTINGS}
           icon={Globe}
-          onSelect={() => setState(current => ({ ...current, mode: 'remote' }))}
+          onSelect={() => {
+            if (!LOCKED_GATEWAY_SETTINGS) {
+              setState(current => ({ ...current, mode: 'remote' }))
+            }
+          }}
           title={g.remoteTitle}
         />
       </div>
@@ -501,8 +535,12 @@ export function GatewaySettings() {
           action={
             <Input
               className={cn('h-8', CONTROL_TEXT)}
-              disabled={state.envOverride}
-              onChange={event => setState(current => ({ ...current, remoteUrl: event.target.value }))}
+              disabled={state.envOverride || LOCKED_GATEWAY_SETTINGS}
+              onChange={event => {
+                if (!LOCKED_GATEWAY_SETTINGS) {
+                  setState(current => ({ ...current, remoteUrl: event.target.value }))
+                }
+              }}
               placeholder="https://gateway.example.com/hermes"
               value={state.remoteUrl}
             />
@@ -566,10 +604,18 @@ export function GatewaySettings() {
               <Input
                 autoComplete="off"
                 className={cn('h-8 font-mono', CONTROL_TEXT)}
-                disabled={state.envOverride}
-                onChange={event => setRemoteToken(event.target.value)}
+                disabled={state.envOverride || LOCKED_GATEWAY_SETTINGS}
+                onChange={event => {
+                  if (!LOCKED_GATEWAY_SETTINGS) {
+                    setRemoteToken(event.target.value)
+                  }
+                }}
                 placeholder={
-                  state.remoteTokenSet ? g.existingToken(state.remoteTokenPreview ?? g.savedToken) : g.pasteSessionToken
+                  LOCKED_GATEWAY_SETTINGS
+                    ? '已内置会话 token'
+                    : state.remoteTokenSet
+                      ? g.existingToken(state.remoteTokenPreview ?? g.savedToken)
+                      : g.pasteSessionToken
                 }
                 type="password"
                 value={remoteToken}
@@ -594,10 +640,15 @@ export function GatewaySettings() {
           {testing ? <Loader2 className="animate-spin" /> : null}
           {g.testRemote}
         </Button>
-        <Button disabled={state.envOverride || saving} onClick={() => void save(false)} size="sm" variant="textStrong">
+        <Button
+          disabled={state.envOverride || LOCKED_GATEWAY_SETTINGS || saving}
+          onClick={() => void save(false)}
+          size="sm"
+          variant="textStrong"
+        >
           {g.saveForRestart}
         </Button>
-        <Button disabled={state.envOverride || saving} onClick={() => void save(true)} size="sm">
+        <Button disabled={state.envOverride || LOCKED_GATEWAY_SETTINGS || saving} onClick={() => void save(true)} size="sm">
           {saving ? <Loader2 className="animate-spin" /> : null}
           {g.saveAndReconnect}
         </Button>

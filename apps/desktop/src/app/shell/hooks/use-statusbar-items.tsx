@@ -1,4 +1,5 @@
 import { useStore } from '@nanostores/react'
+import type { ReactNode } from 'react'
 import { useCallback, useMemo } from 'react'
 
 import type { CommandCenterSection } from '@/app/command-center'
@@ -9,57 +10,50 @@ import { useI18n } from '@/i18n'
 import {
   Activity,
   AlertCircle,
+  ChevronDown,
   Clock,
   Command,
   Hash,
   Loader2,
-  Sparkles,
   Terminal,
   Zap,
   ZapFilled
 } from '@/lib/icons'
+import { formatModelStatusLabel } from '@/lib/model-status-label'
 import type { RuntimeReadinessResult } from '@/lib/runtime-readiness'
 import { contextBarLabel, LiveDuration, usageContextLabel } from '@/lib/statusbar'
 import { cn } from '@/lib/utils'
 import { setGlobalYolo, setSessionYolo } from '@/lib/yolo-session'
-import { $desktopActionTasks } from '@/store/activity'
-import { $previewServerRestartStatus } from '@/store/preview'
 import {
   $activeSessionId,
   $busy,
   $connection,
+  $currentFastMode,
+  $currentModel,
+  $currentProvider,
+  $currentReasoningEffort,
   $currentUsage,
   $sessionStartedAt,
   $turnStartedAt,
-  $workingSessionIds,
   $yoloActive,
+  setModelPickerOpen,
   setYoloActive
 } from '@/store/session'
-import { $subagentsBySession, activeSubagentCount } from '@/store/subagents'
 import { $gatewayRestarting } from '@/store/system-actions'
-import {
-  $backendUpdateApply,
-  $backendUpdateStatus,
-  $desktopVersion,
-  $updateApply,
-  $updateStatus,
-  openUpdateOverlayFor
-} from '@/store/updates'
+import { $desktopVersion } from '@/store/updates'
 import type { StatusResponse } from '@/types/hermes'
 
 import { CRON_ROUTE } from '../../routes'
 import type { StatusbarItem, StatusbarSelectModifiers } from '../statusbar-controls'
 
 interface StatusbarItemsOptions {
-  agentsOpen: boolean
   chatOpen: boolean
   commandCenterOpen: boolean
   extraLeftItems: readonly StatusbarItem[]
   extraRightItems: readonly StatusbarItem[]
-  gatewayLogLines: readonly string[]
   gatewayState: string
   inferenceStatus: RuntimeReadinessResult | null
-  openAgents: () => void
+  modelMenuContent?: ReactNode
   openCommandCenterSection: (section: CommandCenterSection) => void
   freshDraftReady: boolean
   requestGateway: <T = unknown>(method: string, params?: Record<string, unknown>) => Promise<T>
@@ -68,15 +62,13 @@ interface StatusbarItemsOptions {
 }
 
 export function useStatusbarItems({
-  agentsOpen,
   chatOpen,
   commandCenterOpen,
   extraLeftItems,
   extraRightItems,
-  gatewayLogLines,
   gatewayState,
   inferenceStatus,
-  openAgents,
+  modelMenuContent,
   openCommandCenterSection,
   freshDraftReady,
   requestGateway,
@@ -89,18 +81,14 @@ export function useStatusbarItems({
   const terminalTakeover = useStore($terminalTakeover)
   const yoloActive = useStore($yoloActive)
   const busy = useStore($busy)
+  const currentFastMode = useStore($currentFastMode)
+  const currentModel = useStore($currentModel)
+  const currentProvider = useStore($currentProvider)
+  const currentReasoningEffort = useStore($currentReasoningEffort)
   const currentUsage = useStore($currentUsage)
-  const desktopActionTasks = useStore($desktopActionTasks)
   const gatewayRestarting = useStore($gatewayRestarting)
-  const previewServerRestartStatus = useStore($previewServerRestartStatus)
   const sessionStartedAt = useStore($sessionStartedAt)
   const turnStartedAt = useStore($turnStartedAt)
-  const workingSessionIds = useStore($workingSessionIds)
-  const subagentsBySession = useStore($subagentsBySession)
-  const updateStatus = useStore($updateStatus)
-  const updateApply = useStore($updateApply)
-  const backendUpdateStatus = useStore($backendUpdateStatus)
-  const backendUpdateApply = useStore($backendUpdateApply)
   const desktopVersion = useStore($desktopVersion)
   const connection = useStore($connection)
 
@@ -151,32 +139,12 @@ export function useStatusbarItems({
       <GatewayMenuPanel
         gatewayState={gatewayState}
         inferenceStatus={inferenceStatus}
-        logLines={gatewayLogLines}
         onOpenSystem={() => openCommandCenterSection('system')}
         statusSnapshot={statusSnapshot}
       />
     ),
-    [gatewayLogLines, gatewayState, inferenceStatus, openCommandCenterSection, statusSnapshot]
+    [gatewayState, inferenceStatus, openCommandCenterSection, statusSnapshot]
   )
-
-  const { bgFailed, bgRunning, subagentsRunning } = useMemo(() => {
-    const actions = Object.values(desktopActionTasks)
-    const running = actions.filter(t => t.status.running).length
-    const failed = actions.filter(t => !t.status.running && (t.status.exit_code ?? 0) !== 0).length
-    const previewRunning = previewServerRestartStatus === 'running' ? 1 : 0
-    const previewFailed = previewServerRestartStatus === 'error' ? 1 : 0
-
-    const subagentsRunning = Object.values(subagentsBySession).reduce(
-      (sum, items) => sum + activeSubagentCount(items),
-      0
-    )
-
-    return {
-      bgFailed: failed + previewFailed,
-      bgRunning: workingSessionIds.length + running + previewRunning,
-      subagentsRunning
-    }
-  }, [desktopActionTasks, previewServerRestartStatus, subagentsBySession, workingSessionIds])
 
   const gatewayOpen = gatewayState === 'open'
   const gatewayConnecting = gatewayState === 'connecting'
@@ -201,95 +169,18 @@ export function useStatusbarItems({
 
   const clientVersionItem = useMemo<StatusbarItem>(() => {
     const appVersion = desktopVersion?.appVersion
-    const sha = updateStatus?.currentSha?.slice(0, 7) ?? null
-    const behind = updateStatus?.behind ?? 0
-    const applying = updateApply.applying || updateApply.stage === 'restart'
     const remote = connection?.mode === 'remote'
-
-    const version = appVersion ? `v${appVersion}` : (sha ?? copy.unknown)
-    const base = remote ? copy.clientLabel(appVersion ?? sha ?? copy.unknown) : version
-    const behindHint = !applying && behind > 0 ? ` (+${behind})` : ''
-
-    const label = applying
-      ? `${base} · ${updateApply.stage === 'restart' ? copy.restart : copy.update}`
-      : `${base}${behindHint}`
-
-    const tooltip = [
-      applying ? updateApply.message || copy.updateInProgress : null,
-      !applying && behind > 0 && copy.commitsBehind(behind, updateStatus?.branch ?? '...'),
-      appVersion && copy.desktopVersion(appVersion),
-      sha && copy.commit(sha),
-      updateStatus?.branch && copy.branch(updateStatus.branch)
-    ]
-      .filter(Boolean)
-      .join(' · ')
+    const label = remote ? copy.clientLabel(appVersion ?? copy.unknown) : appVersion ? `v${appVersion}` : copy.unknown
 
     return {
-      className: !applying && behind > 0 ? 'text-primary hover:text-primary' : undefined,
-      detail: appVersion && sha && !applying && !remote ? sha : undefined,
-      hidden: !appVersion && !sha,
-      icon: applying ? <Loader2 className="size-3 animate-spin" /> : <Hash className="size-3" />,
+      hidden: !appVersion,
+      icon: <Hash className="size-3" />,
       id: 'version-client',
       label,
-      onSelect: () => openUpdateOverlayFor('client'),
-      title: tooltip || undefined,
-      variant: 'action'
+      title: appVersion ? copy.desktopVersion(appVersion) : undefined,
+      variant: 'text'
     }
-  }, [
-    desktopVersion?.appVersion,
-    connection?.mode,
-    copy,
-    updateApply.applying,
-    updateApply.message,
-    updateApply.stage,
-    updateStatus?.behind,
-    updateStatus?.branch,
-    updateStatus?.currentSha
-  ])
-
-  const backendVersionItem = useMemo<StatusbarItem | null>(() => {
-    if (connection?.mode !== 'remote') {
-      return null
-    }
-
-    const backendVersion = statusSnapshot?.version
-    const behind = backendUpdateStatus?.behind ?? 0
-    const applying = backendUpdateApply.applying || backendUpdateApply.stage === 'restart'
-
-    const base = copy.backendLabel(backendVersion ?? copy.unknown)
-    const behindHint = !applying && behind > 0 ? ` (+${behind})` : ''
-
-    const label = applying
-      ? `${base} · ${backendUpdateApply.stage === 'restart' ? copy.restart : copy.update}`
-      : `${base}${behindHint}`
-
-    const tooltip = [
-      applying ? backendUpdateApply.message || copy.updateInProgress : null,
-      !applying && behind > 0 && copy.commitsBehind(behind, 'main'),
-      backendVersion && copy.backendVersion(backendVersion)
-    ]
-      .filter(Boolean)
-      .join(' · ')
-
-    return {
-      className: !applying && behind > 0 ? 'text-primary hover:text-primary' : undefined,
-      hidden: !backendVersion,
-      icon: applying ? <Loader2 className="size-3 animate-spin" /> : <Hash className="size-3" />,
-      id: 'version-backend',
-      label,
-      onSelect: () => openUpdateOverlayFor('backend'),
-      title: tooltip || undefined,
-      variant: 'action'
-    }
-  }, [
-    connection?.mode,
-    statusSnapshot?.version,
-    backendUpdateStatus?.behind,
-    backendUpdateApply.applying,
-    backendUpdateApply.message,
-    backendUpdateApply.stage,
-    copy
-  ])
+  }, [desktopVersion?.appVersion, connection?.mode, copy])
 
   const coreLeftStatusbarItems = useMemo<readonly StatusbarItem[]>(
     () => [
@@ -319,33 +210,6 @@ export function useStatusbarItems({
         variant: 'menu'
       },
       {
-        className: cn(
-          agentsOpen && 'bg-accent/55 text-foreground',
-          bgFailed > 0 && 'text-destructive hover:text-destructive'
-        ),
-        detail:
-          subagentsRunning > 0
-            ? copy.subagents(subagentsRunning)
-            : bgFailed > 0
-              ? copy.failed(bgFailed)
-              : bgRunning > 0
-                ? copy.running(bgRunning)
-                : undefined,
-        icon:
-          bgFailed > 0 ? (
-            <AlertCircle className="size-3" />
-          ) : bgRunning > 0 || subagentsRunning > 0 ? (
-            <Loader2 className="size-3 animate-spin" />
-          ) : (
-            <Sparkles className="size-3" />
-          ),
-        id: 'agents',
-        label: copy.agents,
-        onSelect: openAgents,
-        title: agentsOpen ? copy.closeAgents : copy.openAgents,
-        variant: 'action'
-      },
-      {
         icon: <Clock className="size-3" />,
         id: 'cron',
         label: copy.cron,
@@ -355,9 +219,6 @@ export function useStatusbarItems({
       }
     ],
     [
-      agentsOpen,
-      bgFailed,
-      bgRunning,
       commandCenterOpen,
       copy,
       gatewayMenuContent,
@@ -366,8 +227,6 @@ export function useStatusbarItems({
       gatewayRestarting,
       inferenceReady,
       inferenceStatus?.reason,
-      openAgents,
-      subagentsRunning,
       toggleCommandCenter
     ]
   )
@@ -413,6 +272,37 @@ export function useStatusbarItems({
         variant: 'action'
       },
       {
+        id: 'model-summary',
+        label: (
+          <span className="inline-flex min-w-0 items-center gap-0.5">
+            <span className="truncate">
+              {formatModelStatusLabel(currentModel, {
+                fastMode: currentFastMode,
+                reasoningEffort: currentReasoningEffort
+              })}
+            </span>
+            <ChevronDown className="size-2.5 shrink-0 opacity-50" />
+          </span>
+        ),
+        ...(modelMenuContent
+          ? {
+              menuAlign: 'end' as const,
+              menuClassName: 'w-64',
+              menuContent: modelMenuContent,
+              title: currentProvider
+                ? copy.modelTitle(currentProvider, currentModel || copy.modelNone)
+                : copy.switchModel,
+              variant: 'menu' as const
+            }
+          : {
+              onSelect: () => setModelPickerOpen(true),
+              title: currentProvider
+                ? copy.providerModelTitle(currentProvider, currentModel || copy.noModel)
+                : copy.openModelPicker,
+              variant: 'action' as const
+            })
+      },
+      {
         className: `w-7 justify-center px-0${terminalTakeover ? ' bg-accent/55 text-foreground' : ''}`,
         hidden: !chatOpen,
         icon: <Terminal className="size-3.5" />,
@@ -422,21 +312,17 @@ export function useStatusbarItems({
         variant: 'action'
       },
       clientVersionItem,
-      ...(backendVersionItem ? [backendVersionItem] : [])
     ],
     [
       busy,
-      chatOpen,
       contextBar,
       contextUsage,
       copy,
       sessionStartedAt,
       showYoloToggle,
-      terminalTakeover,
       toggleYolo,
       turnStartedAt,
       clientVersionItem,
-      backendVersionItem,
       yoloActive
     ]
   )

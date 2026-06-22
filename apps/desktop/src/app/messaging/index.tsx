@@ -15,6 +15,7 @@ import {
 } from '@/hermes'
 import { type Translations, useI18n } from '@/i18n'
 import { AlertTriangle, ExternalLink, Save, Trash2 } from '@/lib/icons'
+import { filterAgentOSMessagingPlatforms } from '@/lib/messaging-platforms'
 import { cn } from '@/lib/utils'
 import { notify, notifyError } from '@/store/notifications'
 import { runGatewayRestart } from '@/store/system-actions'
@@ -115,7 +116,7 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
 
     try {
       const result = await getMessagingPlatforms()
-      setPlatforms(result.platforms)
+      setPlatforms(filterAgentOSMessagingPlatforms(result.platforms))
     } catch (err) {
       if (!silent) {
         notifyError(err, m.loadFailed)
@@ -376,7 +377,7 @@ function PlatformDetail({
             <div className="min-w-0 flex-1">
               <h3 className="text-[0.9375rem] font-semibold tracking-tight">{platform.name}</h3>
               <p className="mt-1 text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-(--ui-text-tertiary)">
-                {platform.description}
+                {descriptionCopy(platform, m)}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <StatePill tone={stateTone(platform)}>{stateLabel(platform.state, m)}</StatePill>
@@ -514,11 +515,11 @@ const PLATFORM_INTRO: Record<string, string> = {
     'On your Mattermost server, create a bot account or personal access token, then paste the server URL and token here.',
   matrix: 'Sign in to your homeserver with the bot account, then copy the access token, user ID, and homeserver URL.',
   signal:
-    'Run a signal-cli REST bridge somewhere reachable, then point Hermes at the URL and the registered phone number.',
+    'Run a signal-cli REST bridge somewhere reachable, then point AgentOS at the URL and the registered phone number.',
   whatsapp:
-    'Start the WhatsApp bridge that ships with Hermes, scan the QR code on first run, then enable the platform.',
+    'Start the WhatsApp bridge that ships with AgentOS, scan the QR code on first run, then enable the platform.',
   bluebubbles:
-    'Run BlueBubbles Server on a Mac with iMessage, expose its API, then point Hermes at the URL with the server password.',
+    'Run BlueBubbles Server on a Mac with iMessage, expose its API, then point AgentOS at the URL with the server password.',
   homeassistant:
     'In Home Assistant, open your profile and create a long-lived access token. Paste it here along with your HA URL.',
   email:
@@ -532,16 +533,19 @@ const PLATFORM_INTRO: Record<string, string> = {
   wecom_callback:
     'Set up a WeCom self-built app, expose its callback URL, and provide the corp ID, secret, agent ID, and AES key.',
   weixin:
-    'Run `hermes gateway setup`, select Weixin, then scan and confirm the QR code with a personal WeChat account. Hermes connects through Tencent\'s iLink Bot API and saves the credentials.',
+    'Run `hermes gateway setup`, select Weixin, then scan and confirm the QR code with a personal WeChat account. AgentOS connects through Tencent\'s iLink Bot API and saves the credentials.',
   qqbot: 'Register an app on the QQ Open Platform (q.qq.com) and copy the App ID and Client Secret.',
   api_server:
-    'Expose Hermes as an OpenAI-compatible API. Set an auth key, then point Open WebUI / LobeChat / etc. at the host:port.',
+    'Expose AgentOS as an OpenAI-compatible API. Set an auth key, then point Open WebUI / LobeChat / etc. at the host:port.',
   webhook:
     'Run an HTTP server that other tools (GitHub, GitLab, custom apps) can POST to. Use the secret to verify signatures.'
 }
 
 const introCopy = (platform: MessagingPlatformInfo, m: Translations['messaging']) =>
   m.platformIntro[platform.id] || PLATFORM_INTRO[platform.id] || platform.description
+
+const descriptionCopy = (platform: MessagingPlatformInfo, m: Translations['messaging']) =>
+  m.platformDescription[platform.id] || platform.description
 
 function MessagingField({
   edits,

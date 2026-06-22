@@ -49,7 +49,7 @@ export function isGatewayReauthRequired(error: unknown): error is GatewayReauthR
 
 export async function resolveGatewayWsUrl(
   desktop: ResolveGatewayWsUrlDeps,
-  conn: Pick<HermesConnection, 'authMode' | 'profile' | 'wsUrl'>
+  conn: Pick<HermesConnection, 'authMode' | 'mode' | 'profile' | 'wsUrl'>
 ): Promise<string> {
   const mint = desktop.getGatewayWsUrl
   // Mint for THIS connection's profile, not the primary. Without it a pooled
@@ -80,7 +80,15 @@ export async function resolveGatewayWsUrl(
   // token / local: the URL carries a long-lived token. Re-mint when available
   // (cheap, keeps parity), but the cached URL is a safe fallback.
   if (mint) {
-    const fresh = await mint(profile).catch(() => null)
+    let fresh: null | string = null
+
+    try {
+      fresh = await mint(profile)
+    } catch (error) {
+      if (conn.mode === 'remote') {
+        throw error
+      }
+    }
 
     if (fresh) {
       return fresh

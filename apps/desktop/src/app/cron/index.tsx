@@ -44,7 +44,7 @@ import { jobState, jobTitle, STATE_DOT } from './job-state'
 
 const DEFAULT_DELIVER = 'local'
 
-const DELIVERY_VALUES: readonly string[] = ['local', 'telegram', 'discord', 'slack', 'email']
+const DELIVERY_VALUES: readonly string[] = [DEFAULT_DELIVER]
 
 const SCHEDULE_OPTIONS: ReadonlyArray<ScheduleOption> = [
   { expr: '0 9 * * *', value: 'daily' },
@@ -95,6 +95,10 @@ function jobScheduleExpr(job: CronJob): string {
 
 function jobDeliver(job: CronJob): string {
   return asText(job.deliver) || DEFAULT_DELIVER
+}
+
+function supportedDeliver(value: string): string {
+  return DELIVERY_VALUES.includes(value) ? value : DEFAULT_DELIVER
 }
 
 function cronParts(expr: string): null | string[] {
@@ -544,7 +548,6 @@ function CronJobDetail({
 }) {
   const state = jobState(job)
   const isPaused = state === 'paused'
-  const deliver = jobDeliver(job)
   const prompt = jobPrompt(job)
 
   return (
@@ -557,9 +560,6 @@ function CronJobDetail({
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-xl font-semibold tracking-tight">{jobTitle(job)}</h3>
                   <StatePill tone={STATE_TONE[state] ?? 'muted'}>{c.states[state] ?? state}</StatePill>
-                  {deliver && deliver !== DEFAULT_DELIVER && (
-                    <StatePill tone="muted">{c.deliveryLabels[deliver] ?? deliver}</StatePill>
-                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.7rem] text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
@@ -746,7 +746,7 @@ function CronEditorDialog({
     setPrompt(initial ? jobPrompt(initial) : '')
     setSchedule(initial ? jobScheduleExpr(initial) : (SCHEDULE_OPTIONS[0].expr ?? ''))
     setSchedulePreset(initial ? scheduleOptionForExpr(jobScheduleExpr(initial)).value : 'daily')
-    setDeliver(initial ? jobDeliver(initial) : DEFAULT_DELIVER)
+    setDeliver(initial ? supportedDeliver(jobDeliver(initial)) : DEFAULT_DELIVER)
     setError(null)
     setSaving(false)
   }, [initial, open])
@@ -785,7 +785,7 @@ function CronEditorDialog({
 
     try {
       await onSave({
-        deliver,
+        deliver: supportedDeliver(deliver),
         name: name.trim(),
         prompt: trimmedPrompt,
         schedule: trimmedSchedule

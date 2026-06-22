@@ -1,22 +1,9 @@
-import { useStore } from '@nanostores/react'
 import type { ComponentProps, ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
-import { Codicon } from '@/components/ui/codicon'
 import { useI18n } from '@/i18n'
-import { triggerHaptic } from '@/lib/haptics'
 import { cn } from '@/lib/utils'
-import { $hapticsMuted, toggleHapticsMuted } from '@/store/haptics'
-import { toggleKeybindPanel } from '@/store/keybinds'
-import {
-  $fileBrowserOpen,
-  $panesFlipped,
-  $sidebarOpen,
-  toggleFileBrowserOpen,
-  togglePanesFlipped,
-  toggleSidebarOpen
-} from '@/store/layout'
 
 import { appViewForPath, isOverlayView } from '../routes'
 
@@ -49,93 +36,15 @@ export function TitlebarControls({ leftTools = [], tools = [], onOpenSettings }:
   const { t } = useI18n()
   const navigate = useNavigate()
   const location = useLocation()
-  const hapticsMuted = useStore($hapticsMuted)
-  const fileBrowserOpen = useStore($fileBrowserOpen)
-  const sidebarOpen = useStore($sidebarOpen)
-  const panesFlipped = useStore($panesFlipped)
-
-  const toggleHaptics = () => {
-    if (!hapticsMuted) {
-      triggerHaptic('tap')
-    }
-
-    toggleHapticsMuted()
-
-    if (hapticsMuted) {
-      window.requestAnimationFrame(() => triggerHaptic('success'))
-    }
-  }
-
-  // Each titlebar button controls the pane physically on its side, so a flip
-  // swaps which pane each one toggles. Default: sessions left, file browser
-  // right. Flipped: file browser left, sessions right. Sidebar toggles never
-  // carry an active highlight — they're plain show/hide affordances.
-  const fileBrowserEdge = { open: fileBrowserOpen, toggle: toggleFileBrowserOpen }
-  const sessionsEdge = { open: sidebarOpen, toggle: toggleSidebarOpen }
-  const leftEdge = panesFlipped ? fileBrowserEdge : sessionsEdge
-  const rightEdge = panesFlipped ? sessionsEdge : fileBrowserEdge
 
   const leftToolbarTools: TitlebarTool[] = [
-    {
-      icon: <Codicon name="layout-sidebar-left" />,
-      id: 'sidebar',
-      label: leftEdge.open ? t.titlebar.hideSidebar : t.titlebar.showSidebar,
-      onSelect: () => {
-        triggerHaptic('tap')
-        leftEdge.toggle()
-      }
-    },
-    {
-      icon: <Codicon name="arrow-swap" />,
-      id: 'flip-panes',
-      label: t.titlebar.swapSidebarSides,
-      onSelect: () => {
-        triggerHaptic('tap')
-        togglePanesFlipped()
-      },
-      title: t.titlebar.swapSidebarSidesTitle
-    },
     ...leftTools
   ]
 
-  const rightSidebarTool: TitlebarTool = {
-    icon: <Codicon name="layout-sidebar-right" />,
-    id: 'right-sidebar',
-    label: rightEdge.open ? t.titlebar.hideRightSidebar : t.titlebar.showRightSidebar,
-    onSelect: () => {
-      triggerHaptic('tap')
-      rightEdge.toggle()
-    }
-  }
-
   // Static system tools — always pinned to the screen's right edge.
-  const systemTools: TitlebarTool[] = [
-    {
-      active: hapticsMuted,
-      icon: <Codicon name={hapticsMuted ? 'mute' : 'unmute'} />,
-      id: 'haptics',
-      label: hapticsMuted ? t.titlebar.unmuteHaptics : t.titlebar.muteHaptics,
-      onSelect: toggleHaptics
-    },
-    {
-      icon: <Codicon name="keyboard" />,
-      id: 'keybinds',
-      label: t.titlebar.openKeybinds,
-      onSelect: () => {
-        triggerHaptic('open')
-        toggleKeybindPanel()
-      }
-    },
-    {
-      icon: <Codicon name="settings-gear" />,
-      id: 'settings',
-      label: t.titlebar.openSettings,
-      onSelect: () => {
-        triggerHaptic('open')
-        onOpenSettings()
-      }
-    }
-  ]
+  const systemTools: TitlebarTool[] = []
+
+  void onOpenSettings
 
   // While a full-screen overlay (settings, command center, …) is open it should
   // visually own the window. These control clusters are `fixed` at a higher
@@ -190,7 +99,6 @@ export function TitlebarControls({ leftTools = [], tools = [], onOpenSettings }:
           <TitlebarToolButton key={tool.id} navigate={navigate} tool={tool} />
         ))}
         {settingsTool && <TitlebarToolButton navigate={navigate} tool={settingsTool} />}
-        <TitlebarToolButton navigate={navigate} tool={rightSidebarTool} />
       </div>
     </>
   )

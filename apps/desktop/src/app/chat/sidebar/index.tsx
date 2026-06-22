@@ -22,7 +22,6 @@ import { PlatformAvatar } from '@/app/messaging/platform-icon'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { DisclosureCaret } from '@/components/ui/disclosure-caret'
-import { KbdGroup } from '@/components/ui/kbd'
 import { SearchField } from '@/components/ui/search-field'
 import {
   Sidebar,
@@ -38,7 +37,7 @@ import { Tip } from '@/components/ui/tooltip'
 import { searchSessions, type SessionInfo, type SessionSearchResult } from '@/hermes'
 import { useWorktreeInfo } from '@/hooks/use-worktree-info'
 import { useI18n } from '@/i18n'
-import { comboTokens } from '@/lib/keybinds/combo'
+import { agentOSMessagingPlatformGroupId, agentOSMessagingPlatformSortValue } from '@/lib/messaging-platforms'
 import { profileColor } from '@/lib/profile-color'
 import { sessionMatchesSearch } from '@/lib/session-search'
 import { normalizeSessionSource, sessionSourceLabel } from '@/lib/session-source'
@@ -114,8 +113,6 @@ const VIRTUALIZE_THRESHOLD = 25
 // dominating the sidebar before the user asks to see it.
 const NON_SESSION_INITIAL_ROWS = 3
 const NON_SESSION_LOAD_STEP = 10
-
-const NEW_SESSION_KBD = comboTokens('mod+n')
 
 const SIDEBAR_NAV: SidebarNavItem[] = [
   {
@@ -362,7 +359,6 @@ export function ChatSidebar({
   const workspaceParentOrderIds = useStore($sidebarWorkspaceParentOrderIds)
   const [searchQuery, setSearchQuery] = useState('')
   const [serverMatches, setServerMatches] = useState<SessionSearchResult[]>([])
-  const [newSessionKbdFlash, setNewSessionKbdFlash] = useState(false)
   const [profileLoadMorePending, setProfileLoadMorePending] = useState<Record<string, boolean>>({})
   const [messagingLoadMorePending, setMessagingLoadMorePending] = useState<Record<string, boolean>>({})
   const messagingOpenIds = useStore($sidebarMessagingOpenIds)
@@ -378,25 +374,6 @@ export function ChatSidebar({
     window.addEventListener(SESSION_SEARCH_FOCUS_EVENT, onFocus)
 
     return () => window.removeEventListener(SESSION_SEARCH_FOCUS_EVENT, onFocus)
-  }, [])
-
-  // Flash the ⌘N hint full-opacity (no transition) for the press, so hitting
-  // the shortcut visibly pings its affordance in the sidebar.
-  useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout> | undefined
-
-    const onShortcut = () => {
-      setNewSessionKbdFlash(true)
-      clearTimeout(timeout)
-      timeout = setTimeout(() => setNewSessionKbdFlash(false), 140)
-    }
-
-    window.addEventListener('hermes:new-session-shortcut', onShortcut)
-
-    return () => {
-      window.removeEventListener('hermes:new-session-shortcut', onShortcut)
-      clearTimeout(timeout)
-    }
   }, [])
 
   const activeSidebarSessionId = currentView === 'chat' ? selectedSessionId : null
@@ -625,7 +602,7 @@ export function ChatSidebar({
     const bySource = new Map<string, SessionInfo[]>()
 
     for (const session of messagingSessions) {
-      const sourceId = normalizeSessionSource(session.source)
+      const sourceId = agentOSMessagingPlatformGroupId(normalizeSessionSource(session.source))
 
       if (!sourceId) {
         continue
@@ -653,7 +630,7 @@ export function ChatSidebar({
           total
         }
       })
-      .sort((a, b) => sessionTime(b.sessions[0]) - sessionTime(a.sessions[0]))
+      .sort((a, b) => agentOSMessagingPlatformSortValue(a.sourceId) - agentOSMessagingPlatformSortValue(b.sourceId))
   }, [messagingSessions, messagingPlatformTotals, messagingTruncated])
 
   // ALL-profiles view: one collapsible group per profile, color on the header
@@ -832,7 +809,7 @@ export function ChatSidebar({
                         // resolved region has been observed to swallow clicks on the
                         // top rows. Same carve-out as USER_BUBBLE_BASE_CLASS in
                         // thread.tsx.
-                        'flex h-7 w-full justify-start gap-2 rounded-md border border-transparent px-2 text-left text-[0.8125rem] font-medium text-(--ui-text-secondary) transition-colors duration-100 ease-out [-webkit-app-region:no-drag] hover:bg-(--ui-control-hover-background) hover:text-foreground hover:transition-none',
+                        'flex h-7 w-full justify-start rounded-md border border-transparent px-2 text-left text-[0.8125rem] font-medium text-(--ui-text-secondary) transition-colors duration-100 ease-out [-webkit-app-region:no-drag] hover:bg-(--ui-control-hover-background) hover:text-foreground hover:transition-none',
                         active &&
                           'border-(--ui-stroke-tertiary) bg-(--ui-control-active-background) text-foreground shadow-none hover:border-(--ui-stroke-tertiary)!',
                         !isInteractive &&
@@ -852,17 +829,9 @@ export function ChatSidebar({
                       tooltip={s.nav[item.id] ?? item.label}
                       type="button"
                     >
-                      <item.icon className="size-4 shrink-0 text-[color-mix(in_srgb,currentColor_72%,transparent)]" />
                       {contentVisible && (
                         <>
                           <span className="min-w-0 flex-1 truncate">{s.nav[item.id] ?? item.label}</span>
-                          {isNewSession && (
-                            <KbdGroup
-                              className={cn('ml-auto opacity-55', newSessionKbdFlash && 'opacity-100!')}
-                              keys={[...NEW_SESSION_KBD]}
-                              size="sm"
-                            />
-                          )}
                         </>
                       )}
                     </SidebarMenuButton>

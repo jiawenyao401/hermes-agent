@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { SessionInfo, SessionMessage } from '@/types/hermes'
 
-import { collectArtifactsForSession } from './index'
+import { artifactTabCounts, collectArtifactsForSession } from './index'
 
 function makeSession(overrides: Partial<SessionInfo> = {}): SessionInfo {
   return {
@@ -57,6 +57,25 @@ describe('collectArtifactsForSession', () => {
       href: 'https://example.com/changelog/latest',
       kind: 'link',
       value: 'https://example.com/changelog/latest'
+    })
+  })
+})
+
+describe('artifactTabCounts', () => {
+  it('counts links as their own visible tab', () => {
+    const artifacts = collectArtifactsForSession(makeSession(), [
+      {
+        content: 'Image: /tmp/lion_720.jpg\nFile: /tmp/report.pdf\nReference: https://example.com/docs',
+        role: 'assistant',
+        timestamp: 2000
+      }
+    ])
+
+    expect(artifacts.map(artifact => artifact.kind).sort()).toEqual(['file', 'image', 'link'])
+    expect(artifactTabCounts(artifacts)).toEqual({
+      file: 1,
+      image: 1,
+      link: 1
     })
   })
 })

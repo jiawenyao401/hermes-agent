@@ -34,6 +34,24 @@ describe('buildToolView image handling', () => {
   })
 })
 
+describe('buildToolView media handling', () => {
+  it('keeps generated video paths for inline media rendering', () => {
+    expect(buildToolView(part({ result: { video: '/Users/me/cat.mp4' }, toolName: 'video_generate' }), '').mediaPath).toBe(
+      '/Users/me/cat.mp4'
+    )
+  })
+
+  it('keeps remote generated video URLs for inline media rendering', () => {
+    const url = 'https://example.com/generated/cat.webm'
+
+    expect(buildToolView(part({ result: { video_url: url }, toolName: 'video_generate' }), '').mediaPath).toBe(url)
+  })
+
+  it('does not treat images as generic media attachments', () => {
+    expect(buildToolView(part({ result: { media: '/Users/me/shot.png' } }), '').mediaPath).toBe('')
+  })
+})
+
 describe('buildToolView terminal exit-code status', () => {
   const terminal = (result: Record<string, unknown>) =>
     buildToolView(part({ result, toolName: 'terminal' }), '')

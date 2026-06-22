@@ -120,7 +120,7 @@ const paletteFilter = (value: string, search: string, keywords?: string[]): numb
   return needle.split(/\s+/).every(term => haystack.includes(term)) ? 1 : 0
 }
 
-// Hermes session ids: <YYYYMMDD>_<HHMMSS>_<6 hex>. Used to offer a direct
+// AgentOS session ids: <YYYYMMDD>_<HHMMSS>_<6 hex>. Used to offer a direct
 // "Go to session ‹id›" jump for ids that aren't in the recent-200 list.
 const SESSION_ID_RE = /^\d{8}_\d{6}_[a-f0-9]{6}$/
 
@@ -352,7 +352,7 @@ export function CommandPalette() {
           {
             icon: Activity,
             id: 'cc-system',
-            keywords: ['command center', 'system', 'status', 'logs'],
+            keywords: ['command center', 'system', 'status'],
             label: cc.sections.system,
             run: go(`${COMMAND_CENTER_ROUTE}?section=system`)
           },

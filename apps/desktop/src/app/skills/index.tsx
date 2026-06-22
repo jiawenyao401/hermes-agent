@@ -24,8 +24,40 @@ import type { SetStatusbarItemGroup } from '../shell/statusbar-controls'
 const SKILLS_MODES = ['skills', 'toolsets'] as const
 type SkillsMode = (typeof SKILLS_MODES)[number]
 
+const SKILL_CATEGORY_LABELS: Record<string, string> = {
+  'autonomous-ai-agents': '自主智能体',
+  'browser-use': '浏览器操作',
+  browser: '浏览器操作',
+  creative: '创意创作',
+  'data-science': '数据科学',
+  devops: '运维 DevOps',
+  email: '邮件',
+  gaming: '游戏',
+  general: '通用',
+  github: 'GitHub / 代码托管',
+  infrastructure: '基础设施',
+  lark: '飞书',
+  mcp: 'MCP 工具',
+  media: '媒体',
+  mlops: '机器学习运维 MLOps',
+  'note-taking': '笔记',
+  productivity: '效率办公',
+  'red-teaming': '红队 / 攻防安全',
+  research: '研究调研',
+  'smart-home': '智能家居',
+  'social-media': '社交媒体',
+  'software-development': '软件开发',
+  'stone-carving-ops': '石雕运维',
+  studio: '创作工作室',
+  xiaohongshu: '小红书'
+}
+
 function categoryFor(skill: SkillInfo): string {
   return asText(skill.category) || 'general'
+}
+
+function skillCategoryLabel(category: string): string {
+  return SKILL_CATEGORY_LABELS[category.toLowerCase()] ?? prettyName(category)
 }
 
 function filteredSkills(skills: SkillInfo[], query: string, category: string | null): SkillInfo[] {
@@ -41,7 +73,14 @@ function filteredSkills(skills: SkillInfo[], query: string, category: string | n
         return true
       }
 
-      return includesQuery(skill.name, q) || includesQuery(skill.description, q) || includesQuery(skill.category, q)
+      const skillCategory = categoryFor(skill)
+
+      return (
+        includesQuery(skill.name, q) ||
+        includesQuery(skill.description, q) ||
+        includesQuery(skillCategory, q) ||
+        includesQuery(skillCategoryLabel(skillCategory), q)
+      )
     })
     .sort((a, b) => asText(a.name).localeCompare(asText(b.name)))
 }
@@ -203,7 +242,7 @@ export function SkillsView({ setStatusbarItemGroup: _setStatusbarItemGroup, ...p
                 key={category.key}
                 onClick={() => setActiveCategory(activeCategory === category.key ? null : category.key)}
               >
-                {prettyName(category.key)} <TextTabMeta>{category.count}</TextTabMeta>
+                {skillCategoryLabel(category.key)} <TextTabMeta>{category.count}</TextTabMeta>
               </TextTab>
             ))}
           </>
@@ -250,7 +289,7 @@ export function SkillsView({ setStatusbarItemGroup: _setStatusbarItemGroup, ...p
                 <div className="space-y-1.5" key={category}>
                   {activeCategory === null && (
                     <div className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                      {prettyName(category)}
+                      {skillCategoryLabel(category)}
                     </div>
                   )}
                   <div>

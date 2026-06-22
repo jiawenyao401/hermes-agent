@@ -42,6 +42,8 @@ const IDLE: UpdateApplyState = {
   log: []
 }
 
+const UPDATES_DISABLED = true
+
 export const $desktopVersion = atom<DesktopVersionInfo | null>(null)
 export const $updateApply = atom<UpdateApplyState>(IDLE)
 export const $updateChecking = atom<boolean>(false)
@@ -58,6 +60,10 @@ export const $updateOverlayTarget = atom<UpdateTarget>('client')
 
 export const setUpdateOverlayOpen = (open: boolean) => $updateOverlayOpen.set(open)
 export const openUpdateOverlayFor = (target: UpdateTarget) => {
+  if (UPDATES_DISABLED) {
+    return
+  }
+
   $updateOverlayTarget.set(target)
   $updateOverlayOpen.set(true)
   void (target === 'backend' ? checkBackendUpdates() : checkUpdates())
@@ -119,6 +125,10 @@ function isSkewToastSnoozed(): boolean {
  * doesn't nag on every thread switch.
  */
 export function reportBackendContract(contract: number | undefined): void {
+  if (UPDATES_DISABLED) {
+    return
+  }
+
   if ((contract ?? 0) >= REQUIRED_BACKEND_CONTRACT) {
     dismissNotification(SKEW_TOAST_ID)
     // Backend caught up — forget any prior snooze so a future regression warns
@@ -156,6 +166,10 @@ export function reportBackendContract(contract: number | undefined): void {
  * on every new commit. The snooze is persisted, so it survives relaunches too.
  */
 export function maybeNotifyUpdateAvailable(status: DesktopUpdateStatus | null) {
+  if (UPDATES_DISABLED) {
+    return
+  }
+
   if (!status || status.supported === false || status.error || !status.targetSha) {
     return
   }
@@ -192,6 +206,10 @@ export function maybeNotifyUpdateAvailable(status: DesktopUpdateStatus | null) {
 }
 
 export function openUpdatesWindow(): void {
+  if (UPDATES_DISABLED) {
+    return
+  }
+
   openUpdateOverlayFor(isRemoteMode() ? 'backend' : 'client')
 }
 
@@ -255,6 +273,10 @@ function mapBackendCheck(res: BackendUpdateCheckResponse): DesktopUpdateStatus {
 }
 
 export async function checkBackendUpdates(): Promise<DesktopUpdateStatus | null> {
+  if (UPDATES_DISABLED) {
+    return null
+  }
+
   if (!isRemoteMode() || $backendUpdateChecking.get()) {
     return $backendUpdateStatus.get()
   }
@@ -284,6 +306,10 @@ export async function checkBackendUpdates(): Promise<DesktopUpdateStatus | null>
 }
 
 export async function checkUpdates(): Promise<DesktopUpdateStatus | null> {
+  if (UPDATES_DISABLED) {
+    return null
+  }
+
   const bridge = window.hermesDesktop?.updates
 
   if (!bridge || $updateChecking.get()) {
@@ -319,6 +345,10 @@ export async function checkUpdates(): Promise<DesktopUpdateStatus | null> {
 }
 
 export async function applyUpdates(opts: DesktopUpdateApplyOptions = {}): Promise<DesktopUpdateApplyResult> {
+  if (UPDATES_DISABLED) {
+    return { ok: false, error: 'disabled', message: 'Updates are disabled.' }
+  }
+
   const bridge = window.hermesDesktop?.updates
 
   if (!bridge) {
@@ -456,6 +486,10 @@ function finishBackendApply(returned: boolean): DesktopUpdateApplyResult {
 }
 
 export async function applyBackendUpdate(): Promise<DesktopUpdateApplyResult> {
+  if (UPDATES_DISABLED) {
+    return { ok: false, error: 'disabled', message: 'Updates are disabled.' }
+  }
+
   dismissNotification(UPDATE_TOAST_ID)
   $backendUpdateApply.set({ ...IDLE, applying: true, stage: 'prepare', message: translateNow('updates.applyStatus.preparing') })
 
@@ -547,6 +581,12 @@ let lastConnectionMode: string | undefined
 
 /** Wire up background polling + progress streaming. Idempotent. */
 export function startUpdatePoller(): void {
+  if (UPDATES_DISABLED) {
+    void refreshDesktopVersion()
+
+    return
+  }
+
   if (pollerStarted || typeof window === 'undefined') {
     return
   }
@@ -597,6 +637,12 @@ export function stopUpdatePoller(): void {
 }
 
 function onFocus() {
+  if (UPDATES_DISABLED) {
+    void refreshDesktopVersion()
+
+    return
+  }
+
   const now = Date.now()
 
   if (now - lastFocusAt < 5 * 60 * 1000) {

@@ -92,7 +92,7 @@ export function useGatewayBoot({
     // --- Reconnect-after-sleep machinery -------------------------------------
     // macOS sleep silently drops the renderer's WebSocket. The backend Python
     // process keeps running, but nothing re-opened the socket on wake, so the
-    // composer stayed disabled forever on "Starting Hermes...". Once the
+    // composer stayed disabled forever on "Starting AgentOS...". Once the
     // initial boot succeeds we treat any non-open state as recoverable and
     // reconnect with backoff, and we nudge a reconnect on the OS/browser
     // signals that fire around wake (power resume, network online, the window
@@ -118,6 +118,30 @@ export function useGatewayBoot({
       }
     }
 
+    const connectGateway = async (conn: HermesConnection): Promise<HermesConnection> => {
+      publish(conn)
+      const wsUrl = await resolveGatewayWsUrl(desktop, conn)
+
+      try {
+        await gateway.connect(wsUrl)
+
+        return conn
+      } catch (error) {
+        if (conn.mode !== 'remote' || conn.authMode === 'oauth') {
+          throw error
+        }
+
+        gateway.close()
+        await desktop.revalidateConnection?.().catch(() => undefined)
+        const refreshed = await desktop.getConnection(conn.profile ?? $activeGatewayProfile.get())
+        publish(refreshed)
+        const refreshedWsUrl = await resolveGatewayWsUrl(desktop, refreshed)
+        await gateway.connect(refreshedWsUrl)
+
+        return refreshed
+      }
+    }
+
     const attemptReconnect = async () => {
       if (cancelled || reconnecting || gatewayOpen()) {
         return
@@ -130,7 +154,7 @@ export function useGatewayBoot({
         // remote backend can become unreachable, but it has no child process
         // whose 'exit' would clear the main process's cached descriptor — without
         // this the renderer re-dials the same dead endpoint forever and stays on
-        // "Starting Hermes…". The probe is a no-op for a healthy or local backend.
+        // "Starting AgentOS…". The probe is a no-op for a healthy or local backend.
         await desktop.revalidateConnection?.().catch(() => undefined)
 
         const conn = await desktop.getConnection($activeGatewayProfile.get())
@@ -139,16 +163,14 @@ export function useGatewayBoot({
           return
         }
 
-        publish(conn)
         // Re-mint the WS URL before reconnecting. OAuth tickets are single-use
         // with a short TTL, so the ticket baked into the cached conn.wsUrl is
         // dead on every reconnect after the initial boot — reusing it surfaces
-        // as an opaque "Could not connect to Hermes gateway". resolveGatewayWsUrl
+        // as an opaque "Could not connect to AgentOS gateway". resolveGatewayWsUrl
         // mints a fresh ticket (or throws a reauth error in OAuth mode rather
         // than connecting with a stale one). For local/token gateways the URL
         // carries a long-lived token and the re-mint is a cheap no-op.
-        const wsUrl = await resolveGatewayWsUrl(desktop, conn)
-        await gateway.connect(wsUrl)
+        await connectGateway(conn)
 
         if (cancelled) {
           return
@@ -326,14 +348,12 @@ export function useGatewayBoot({
           message: translateNow('boot.steps.connectingGateway'),
           progress: 95
         })
-        publish(conn)
         // Mint a fresh WS URL right before connecting. For OAuth gateways the
         // ticket is single-use with a short TTL, so the ticket baked into
         // conn.wsUrl is stale; resolveGatewayWsUrl() re-mints it and, on
         // failure, throws a reauth error rather than connecting with a dead
         // ticket (which would surface as an opaque "connection closed").
-        const wsUrl = await resolveGatewayWsUrl(desktop, conn)
-        await gateway.connect(wsUrl)
+        await connectGateway(conn)
 
         if (cancelled) {
           return
@@ -359,10 +379,12 @@ export function useGatewayBoot({
         })
         await ensureDefaultWorkspaceCwd()
         const remoteDefault = await desktopDefaultCwd().catch(() => null)
+
         if (remoteDefault?.cwd && !$activeSessionId.get() && !$currentCwd.get()) {
           setCurrentCwd(remoteDefault.cwd)
           setCurrentBranch(remoteDefault.branch || '')
         }
+
         await callbacksRef.current.refreshHermesConfig()
 
         if (cancelled) {
