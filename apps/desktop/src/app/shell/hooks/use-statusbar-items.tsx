@@ -1,7 +1,9 @@
 import { useStore } from '@nanostores/react'
+import type { ReactNode } from 'react'
 import { useCallback, useMemo } from 'react'
 
 import type { CommandCenterSection } from '@/app/command-center'
+import { $terminalTakeover, setTerminalTakeover } from '@/app/right-sidebar/store'
 import { GatewayMenuPanel } from '@/app/shell/gateway-menu-panel'
 import { GlyphSpinner } from '@/components/ui/glyph-spinner'
 import { useI18n } from '@/i18n'
@@ -13,7 +15,6 @@ import {
   Command,
   Hash,
   Loader2,
-  Sparkles,
   Terminal,
   Zap,
   ZapFilled
@@ -23,8 +24,6 @@ import type { RuntimeReadinessResult } from '@/lib/runtime-readiness'
 import { contextBarLabel, LiveDuration, usageContextLabel } from '@/lib/statusbar'
 import { cn } from '@/lib/utils'
 import { setGlobalYolo, setSessionYolo } from '@/lib/yolo-session'
-import { $desktopActionTasks } from '@/store/activity'
-import { $previewServerRestartStatus } from '@/store/preview'
 import {
   $activeSessionId,
   $busy,
@@ -36,32 +35,25 @@ import {
   $currentUsage,
   $sessionStartedAt,
   $turnStartedAt,
-  $workingSessionIds,
   $yoloActive,
   setModelPickerOpen,
   setYoloActive
 } from '@/store/session'
-import { $subagentsBySession, activeSubagentCount } from '@/store/subagents'
 import { $gatewayRestarting } from '@/store/system-actions'
-import {
-  $desktopVersion,
-} from '@/store/updates'
+import { $desktopVersion } from '@/store/updates'
 import type { StatusResponse } from '@/types/hermes'
 
 import { CRON_ROUTE } from '../../routes'
 import type { StatusbarItem, StatusbarSelectModifiers } from '../statusbar-controls'
-import { $terminalTakeover, setTerminalTakeover } from '@/app/right-sidebar/store'
 
 interface StatusbarItemsOptions {
-  agentsOpen: boolean
   chatOpen: boolean
   commandCenterOpen: boolean
   extraLeftItems: readonly StatusbarItem[]
   extraRightItems: readonly StatusbarItem[]
-  gatewayLogLines: readonly string[]
   gatewayState: string
   inferenceStatus: RuntimeReadinessResult | null
-  openAgents: () => void
+  modelMenuContent?: ReactNode
   openCommandCenterSection: (section: CommandCenterSection) => void
   freshDraftReady: boolean
   requestGateway: <T = unknown>(method: string, params?: Record<string, unknown>) => Promise<T>
@@ -70,16 +62,13 @@ interface StatusbarItemsOptions {
 }
 
 export function useStatusbarItems({
-  agentsOpen,
   chatOpen,
   commandCenterOpen,
   extraLeftItems,
   extraRightItems,
-  gatewayLogLines,
   gatewayState,
   inferenceStatus,
   modelMenuContent,
-  openAgents,
   openCommandCenterSection,
   freshDraftReady,
   requestGateway,
@@ -97,13 +86,9 @@ export function useStatusbarItems({
   const currentProvider = useStore($currentProvider)
   const currentReasoningEffort = useStore($currentReasoningEffort)
   const currentUsage = useStore($currentUsage)
-  const desktopActionTasks = useStore($desktopActionTasks)
   const gatewayRestarting = useStore($gatewayRestarting)
-  const previewServerRestartStatus = useStore($previewServerRestartStatus)
   const sessionStartedAt = useStore($sessionStartedAt)
   const turnStartedAt = useStore($turnStartedAt)
-  const workingSessionIds = useStore($workingSessionIds)
-  const subagentsBySession = useStore($subagentsBySession)
   const desktopVersion = useStore($desktopVersion)
   const connection = useStore($connection)
 
@@ -154,32 +139,12 @@ export function useStatusbarItems({
       <GatewayMenuPanel
         gatewayState={gatewayState}
         inferenceStatus={inferenceStatus}
-        logLines={gatewayLogLines}
         onOpenSystem={() => openCommandCenterSection('system')}
         statusSnapshot={statusSnapshot}
       />
     ),
-    [gatewayLogLines, gatewayState, inferenceStatus, openCommandCenterSection, statusSnapshot]
+    [gatewayState, inferenceStatus, openCommandCenterSection, statusSnapshot]
   )
-
-  const { bgFailed, bgRunning, subagentsRunning } = useMemo(() => {
-    const actions = Object.values(desktopActionTasks)
-    const running = actions.filter(t => t.status.running).length
-    const failed = actions.filter(t => !t.status.running && (t.status.exit_code ?? 0) !== 0).length
-    const previewRunning = previewServerRestartStatus === 'running' ? 1 : 0
-    const previewFailed = previewServerRestartStatus === 'error' ? 1 : 0
-
-    const subagentsRunning = Object.values(subagentsBySession).reduce(
-      (sum, items) => sum + activeSubagentCount(items),
-      0
-    )
-
-    return {
-      bgFailed: failed + previewFailed,
-      bgRunning: workingSessionIds.length + running + previewRunning,
-      subagentsRunning
-    }
-  }, [desktopActionTasks, previewServerRestartStatus, subagentsBySession, workingSessionIds])
 
   const gatewayOpen = gatewayState === 'open'
   const gatewayConnecting = gatewayState === 'connecting'
@@ -245,33 +210,6 @@ export function useStatusbarItems({
         variant: 'menu'
       },
       {
-        className: cn(
-          agentsOpen && 'bg-accent/55 text-foreground',
-          bgFailed > 0 && 'text-destructive hover:text-destructive'
-        ),
-        detail:
-          subagentsRunning > 0
-            ? copy.subagents(subagentsRunning)
-            : bgFailed > 0
-              ? copy.failed(bgFailed)
-              : bgRunning > 0
-                ? copy.running(bgRunning)
-                : undefined,
-        icon:
-          bgFailed > 0 ? (
-            <AlertCircle className="size-3" />
-          ) : bgRunning > 0 || subagentsRunning > 0 ? (
-            <Loader2 className="size-3 animate-spin" />
-          ) : (
-            <Sparkles className="size-3" />
-          ),
-        id: 'agents',
-        label: copy.agents,
-        onSelect: openAgents,
-        title: agentsOpen ? copy.closeAgents : copy.openAgents,
-        variant: 'action'
-      },
-      {
         icon: <Clock className="size-3" />,
         id: 'cron',
         label: copy.cron,
@@ -281,9 +219,6 @@ export function useStatusbarItems({
       }
     ],
     [
-      agentsOpen,
-      bgFailed,
-      bgRunning,
       commandCenterOpen,
       copy,
       gatewayMenuContent,
@@ -292,8 +227,6 @@ export function useStatusbarItems({
       gatewayRestarting,
       inferenceReady,
       inferenceStatus?.reason,
-      openAgents,
-      subagentsRunning,
       toggleCommandCenter
     ]
   )

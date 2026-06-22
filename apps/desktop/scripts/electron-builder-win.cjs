@@ -11,5 +11,9 @@ const config = { ...(pkg.build || {}) }
 // string as a hook path, resolves it to the project directory, then tries to
 // import apps/desktop as an ES module.
 delete config.electronDist
+config.electronDownload = {
+  ...(config.electronDownload || {}),
+  mirror: process.env.ELECTRON_MIRROR || 'https://npmmirror.com/mirrors/electron/'
+}
 
 module.exports = config

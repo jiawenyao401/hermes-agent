@@ -460,6 +460,7 @@ export interface Translations {
       disconnect: string
       disconnectInTerminal: string
       removeConfirm: (provider: string) => string
+      removeExternal: (provider: string, command: string) => string
       removeExternalGeneric: (provider: string) => string
       removeKeyManaged: (provider: string) => string
       removeTerminalConfirm: (provider: string, command: string) => string
@@ -633,8 +634,10 @@ export interface Translations {
     gatewayRunning: string
     gatewayStopped: string
     hermesActiveSessions: (version: string, count: number) => string
+    restartMessaging: string
     restartGateway: string
     gatewayRestartFailed: string
+    systemUnavailable: string
     updateHermes: string
     actionRunning: string
     actionDone: string
@@ -702,6 +705,7 @@ export interface Translations {
     failedSave: (name: string) => string
     failedClear: (key: string) => string
     fieldCopy: Record<string, { label?: string; help?: string; placeholder?: string }>
+    platformDescription: Record<string, string>
     platformIntro: Record<string, string>
   }
 

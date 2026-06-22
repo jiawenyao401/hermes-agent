@@ -62,7 +62,7 @@ describe('collectArtifactsForSession', () => {
 })
 
 describe('artifactTabCounts', () => {
-  it('excludes links from all artifacts count', () => {
+  it('counts links as their own visible tab', () => {
     const artifacts = collectArtifactsForSession(makeSession(), [
       {
         content: 'Image: /tmp/lion_720.jpg\nFile: /tmp/report.pdf\nReference: https://example.com/docs',
@@ -73,9 +73,9 @@ describe('artifactTabCounts', () => {
 
     expect(artifacts.map(artifact => artifact.kind).sort()).toEqual(['file', 'image', 'link'])
     expect(artifactTabCounts(artifacts)).toEqual({
-      all: 2,
       file: 1,
-      image: 1
+      image: 1,
+      link: 1
     })
   })
 })

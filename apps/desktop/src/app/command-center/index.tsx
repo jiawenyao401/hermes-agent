@@ -8,7 +8,6 @@ import { SearchField } from '@/components/ui/search-field'
 import { SegmentedControl } from '@/components/ui/segmented-control'
 import {
   getActionStatus,
-  getLogs,
   getStatus,
   getUsageAnalytics,
   restartGateway
@@ -122,7 +121,6 @@ export function CommandCenterView({ initialSection, onClose, onDeleteSession, on
 
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<StatusResponse | null>(null)
-  const [logs, setLogs] = useState<string[]>([])
   const [systemLoading, setSystemLoading] = useState(false)
   const [systemError, setSystemError] = useState('')
   const [systemAction, setSystemAction] = useState<ActionStatusResponse | null>(null)
@@ -160,22 +158,15 @@ export function CommandCenterView({ initialSection, onClose, onDeleteSession, on
     setSystemError('')
 
     try {
-      const [nextStatus, nextLogs] = await Promise.all([
-        getStatus(),
-        getLogs({
-          file: 'agent',
-          lines: 120
-        })
-      ])
+      const nextStatus = await getStatus()
 
       setStatus(nextStatus)
-      setLogs(nextLogs.lines)
-    } catch (error) {
-      setSystemError(error instanceof Error ? error.message : String(error))
+    } catch {
+      setSystemError(cc.systemUnavailable)
     } finally {
       setSystemLoading(false)
     }
-  }, [])
+  }, [cc.systemUnavailable])
 
   const refreshUsage = useCallback(async (days: UsagePeriod) => {
     const requestId = usageRequestRef.current + 1
@@ -255,7 +246,7 @@ export function CommandCenterView({ initialSection, onClose, onDeleteSession, on
           upsertDesktopActionTask(pendingStatus)
         }
       } catch (error) {
-        setSystemError(error instanceof Error ? error.message : String(error))
+        setSystemError(cc.gatewayRestartFailed)
       } finally {
         void refreshSystem()
       }
@@ -371,7 +362,7 @@ export function CommandCenterView({ initialSection, onClose, onDeleteSession, on
               usage={usage}
             />
           ) : (
-            <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-4">
+            <div className="min-h-0 flex-1">
               <div className="border-b border-(--ui-stroke-tertiary) pb-4">
                 {status ? (
                   <div className="grid gap-2">
@@ -408,26 +399,12 @@ export function CommandCenterView({ initialSection, onClose, onDeleteSession, on
                 ) : (
                   <PageLoader className="min-h-32" label={cc.loadingStatus} />
                 )}
-              </div>
-
-              <div className="flex min-h-0 flex-col">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[0.625rem] font-medium uppercase tracking-[0.08em] text-(--ui-text-tertiary)">
-                    {cc.recentLogs}
+                {systemError && (
+                  <span className="mt-3 inline-flex items-center gap-1 text-[length:var(--conversation-caption-font-size)] text-destructive">
+                    <AlertCircle className="size-3.5" />
+                    {systemError}
                   </span>
-                  {systemError && (
-                    <span className="inline-flex items-center gap-1 text-[length:var(--conversation-caption-font-size)] text-destructive">
-                      <AlertCircle className="size-3.5" />
-                      {systemError}
-                    </span>
-                  )}
-                </div>
-                <pre
-                  className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap wrap-break-word rounded-lg border border-(--ui-stroke-tertiary) bg-(--ui-bg-quinary) p-3 font-mono text-[0.65rem] leading-relaxed text-(--ui-text-tertiary)"
-                  data-selectable-text="true"
-                >
-                  {logs.length ? logs.join('\n') : cc.noLogs}
-                </pre>
+                )}
               </div>
             </div>
           )}

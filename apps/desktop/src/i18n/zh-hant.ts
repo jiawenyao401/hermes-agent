@@ -835,7 +835,7 @@ export const zhHant = defineLocale({
     sections: { sessions: '工作階段', system: '系統', usage: '使用量' },
     sectionDescriptions: {
       sessions: '搜尋和管理工作階段',
-      system: '狀態、記錄和系統動作',
+      system: '狀態和系統動作',
       usage: '一段時間內的詞元、費用和技能活動'
     },
     nav: {
@@ -847,7 +847,7 @@ export const zhHant = defineLocale({
     },
     sectionEntries: {
       sessions: { title: '工作階段面板', detail: '搜尋、釘選和管理工作階段' },
-      system: { title: '系統面板', detail: '閘道狀態、記錄、重新啟動/更新' },
+      system: { title: '系統面板', detail: '閘道狀態與重新啟動/更新' },
       usage: { title: '使用量面板', detail: '詞元、費用和技能活動' }
     },
     providerNavigate: '導覽',
@@ -867,6 +867,7 @@ export const zhHant = defineLocale({
     updateHermes: '更新 AgentOS',
     restartGateway: '重新啟動閘道',
     gatewayRestartFailed: '閘道重新啟動失敗。',
+    systemUnavailable: '系統狀態暫時無法使用。',
     actionRunning: '執行中',
     actionDone: '完成',
     actionFailed: '失敗',
@@ -1015,6 +1016,7 @@ export const zhHant = defineLocale({
         help: '建議設定。逗號分隔的電話號碼或 WhatsApp ID。'
       }
     },
+    platformDescription: {},
     platformIntro: {}
   },
 

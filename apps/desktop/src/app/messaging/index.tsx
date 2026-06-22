@@ -377,7 +377,7 @@ function PlatformDetail({
             <div className="min-w-0 flex-1">
               <h3 className="text-[0.9375rem] font-semibold tracking-tight">{platform.name}</h3>
               <p className="mt-1 text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-(--ui-text-tertiary)">
-                {platform.description}
+                {descriptionCopy(platform, m)}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <StatePill tone={stateTone(platform)}>{stateLabel(platform.state, m)}</StatePill>
@@ -543,6 +543,9 @@ const PLATFORM_INTRO: Record<string, string> = {
 
 const introCopy = (platform: MessagingPlatformInfo, m: Translations['messaging']) =>
   m.platformIntro[platform.id] || PLATFORM_INTRO[platform.id] || platform.description
+
+const descriptionCopy = (platform: MessagingPlatformInfo, m: Translations['messaging']) =>
+  m.platformDescription[platform.id] || platform.description
 
 function MessagingField({
   edits,

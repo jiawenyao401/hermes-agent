@@ -10,6 +10,8 @@ const appsDir = path.join(repoRoot, 'apps')
 const releaseDir = path.join(desktopRoot, 'release')
 const packageJson = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'package.json'), 'utf8'))
 const version = packageJson.version
+const electronVersion = packageJson.build?.electronVersion
+const electronMirror = process.env.ELECTRON_MIRROR || 'https://npmmirror.com/mirrors/electron/'
 
 function run(command, args, options = {}) {
   console.log(`\n$ ${[command, ...args].join(' ')}`)
@@ -80,6 +82,45 @@ function removeMatchingArtifacts(pattern) {
   }
 }
 
+function ensureWindowsElectronDist() {
+  if (!electronVersion) {
+    throw new Error('package.json build.electronVersion is required for Windows client packaging')
+  }
+
+  const fileName = `electron-v${electronVersion}-win32-x64.zip`
+  const cacheDir = path.join(desktopRoot, 'build', 'electron-cache')
+  const zipPath = path.join(cacheDir, fileName)
+  const distDir = path.join(desktopRoot, 'build', 'electron', 'win32-x64')
+  const electronExe = path.join(distDir, 'electron.exe')
+
+  if (fs.existsSync(electronExe)) {
+    console.log(`[build-clients] using cached Windows Electron runtime: ${path.relative(repoRoot, distDir)}`)
+
+    return distDir
+  }
+
+  ensureDir(cacheDir)
+  ensureDir(path.dirname(distDir))
+
+  const mirrorBase = electronMirror.endsWith('/') ? electronMirror : `${electronMirror}/`
+  const url = `${mirrorBase}v${electronVersion}/${fileName}`
+
+  console.log(`[build-clients] downloading Windows Electron runtime: ${url}`)
+  run('curl', ['-L', '--fail', '--retry', '3', '--connect-timeout', '20', '-o', zipPath, url], { cwd: repoRoot })
+
+  fs.rmSync(distDir, { force: true, recursive: true })
+  ensureDir(distDir)
+  run('ditto', ['-x', '-k', zipPath, distDir], { cwd: repoRoot })
+
+  if (!fs.existsSync(electronExe)) {
+    throw new Error(`Windows Electron runtime did not contain electron.exe: ${distDir}`)
+  }
+
+  console.log(`[build-clients] prepared Windows Electron runtime: ${path.relative(repoRoot, distDir)}`)
+
+  return distDir
+}
+
 function main() {
   if (process.platform !== 'darwin') {
     throw new Error('this script currently builds the Mac DMG and cross-builds Windows from macOS; run it on Apple Mac')
@@ -102,12 +143,26 @@ function main() {
   maybeVerifyDmg(macOut)
 
   // package.json points electronDist at this host's Electron build for fast
-  // local dev packaging. Use a Windows-specific config that omits electronDist
-  // so electron-builder downloads the correct win32 x64 Electron runtime
-  // instead of trying to rename the macOS binary as AgentOS.exe. Do not pass
-  // `-c.electronDist=`: electron-builder 26 treats the empty string as a hook
-  // path and tries to import the project directory.
-  npm(['run', 'builder', '--', '--win', 'nsis', '--x64', '--config', 'scripts/electron-builder-win.cjs'])
+  // local dev packaging. Cross-building Windows from macOS needs a win32 x64
+  // runtime instead; prepare it explicitly and point electron-builder there so
+  // it can rename electron.exe to AgentOS.exe.
+  const winElectronDist = ensureWindowsElectronDist()
+  npm([
+    'run',
+    'builder',
+    '--',
+    '--win',
+    'nsis',
+    '--x64',
+    '--config',
+    'scripts/electron-builder-win.cjs',
+    `-c.electronDist=${winElectronDist}`
+  ], {
+    env: {
+      ELECTRON_MIRROR: electronMirror,
+      HERMES_ELECTRON_BUILDER_SKIP_LOCAL_DIST: '1'
+    }
+  })
   const winOut = copyArtifact(winArtifact)
   verifyFile(winOut)
 

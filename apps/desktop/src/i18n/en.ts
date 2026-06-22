@@ -743,7 +743,7 @@ export const en: Translations = {
     sections: { sessions: 'Sessions', system: 'System', usage: 'Usage' },
     sectionDescriptions: {
       sessions: 'Search and manage sessions',
-      system: 'Status, logs, and system actions',
+      system: 'Status and system actions',
       usage: 'Token, cost, and skill activity over time'
     },
     nav: {
@@ -755,7 +755,7 @@ export const en: Translations = {
     },
     sectionEntries: {
       sessions: { title: 'Sessions panel', detail: 'Search, pin, and manage sessions' },
-      system: { title: 'System panel', detail: 'Gateway status, logs, restart/update' },
+      system: { title: 'System panel', detail: 'Gateway status and restart/update' },
       usage: { title: 'Usage panel', detail: 'Token, cost, and skill activity' }
     },
     providerNavigate: 'Navigate',
@@ -775,6 +775,7 @@ export const en: Translations = {
     updateHermes: 'Update AgentOS',
     restartGateway: 'Restart gateway',
     gatewayRestartFailed: 'Gateway restart failed.',
+    systemUnavailable: 'System status is unavailable.',
     actionRunning: 'running',
     actionDone: 'done',
     actionFailed: 'failed',
@@ -932,6 +933,7 @@ export const en: Translations = {
         help: 'Recommended. Comma-separated phone numbers or WhatsApp IDs.'
       }
     },
+    platformDescription: {},
     platformIntro: {}
   },
 

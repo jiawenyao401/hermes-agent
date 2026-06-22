@@ -36,9 +36,8 @@ import { sessionRoute } from '../routes'
 import type { SetStatusbarItemGroup } from '../shell/statusbar-controls'
 
 type ArtifactKind = 'image' | 'file' | 'link'
-type VisibleArtifactKind = Exclude<ArtifactKind, 'link'>
-type ArtifactFilter = 'all' | VisibleArtifactKind
-const ARTIFACT_FILTERS: readonly ArtifactFilter[] = ['all', 'image', 'file']
+type ArtifactFilter = ArtifactKind
+const ARTIFACT_FILTERS: readonly ArtifactFilter[] = ['image', 'file', 'link']
 
 interface ArtifactRecord {
   id: string
@@ -360,17 +359,11 @@ interface ArtifactColumn {
   width: (filter: ArtifactFilter) => string
 }
 
-function isVisibleArtifact(artifact: ArtifactRecord): boolean {
-  return artifact.kind !== 'link'
-}
-
 export function artifactTabCounts(artifacts: readonly ArtifactRecord[]) {
-  const visibleArtifacts = artifacts.filter(isVisibleArtifact)
-
   return {
-    all: visibleArtifacts.length,
-    file: visibleArtifacts.filter(artifact => artifact.kind === 'file').length,
-    image: visibleArtifacts.filter(artifact => artifact.kind === 'image').length
+    file: artifacts.filter(artifact => artifact.kind === 'file').length,
+    image: artifacts.filter(artifact => artifact.kind === 'image').length,
+    link: artifacts.filter(artifact => artifact.kind === 'link').length
   }
 }
 
@@ -386,11 +379,12 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
   const [query, setQuery] = useState('')
   const [refreshing, setRefreshing] = useState(false)
 
-  const [kindFilter, setKindFilter] = useRouteEnumParam('tab', ARTIFACT_FILTERS, 'all')
+  const [kindFilter, setKindFilter] = useRouteEnumParam('tab', ARTIFACT_FILTERS, 'image')
 
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(() => new Set())
   const [imagePage, setImagePage] = useState(1)
   const [filePage, setFilePage] = useState(1)
+  const [linkPage, setLinkPage] = useState(1)
 
   const refreshArtifacts = useCallback(async () => {
     setRefreshing(true)
@@ -427,6 +421,7 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
   useEffect(() => {
     setImagePage(1)
     setFilePage(1)
+    setLinkPage(1)
   }, [artifacts, kindFilter, query])
 
   const visibleArtifacts = useMemo(() => {
@@ -437,11 +432,7 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
     const q = query.trim().toLowerCase()
 
     return artifacts.filter(artifact => {
-      if (!isVisibleArtifact(artifact)) {
-        return false
-      }
-
-      if (kindFilter !== 'all' && artifact.kind !== kindFilter) {
+      if (artifact.kind !== kindFilter) {
         return false
       }
 
@@ -467,10 +458,17 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
     [visibleArtifacts]
   )
 
+  const visibleLinkArtifacts = useMemo(
+    () => visibleArtifacts.filter(artifact => artifact.kind === 'link'),
+    [visibleArtifacts]
+  )
+
   const imagePageCount = Math.max(1, Math.ceil(visibleImageArtifacts.length / 24))
   const filePageCount = Math.max(1, Math.ceil(visibleFileArtifacts.length / 100))
+  const linkPageCount = Math.max(1, Math.ceil(visibleLinkArtifacts.length / 100))
   const currentImagePage = Math.min(imagePage, imagePageCount)
   const currentFilePage = Math.min(filePage, filePageCount)
+  const currentLinkPage = Math.min(linkPage, linkPageCount)
 
   const pagedImageArtifacts = useMemo(
     () => visibleImageArtifacts.slice((currentImagePage - 1) * 24, currentImagePage * 24),
@@ -482,21 +480,31 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
     [currentFilePage, visibleFileArtifacts]
   )
 
+  const pagedLinkArtifacts = useMemo(
+    () => visibleLinkArtifacts.slice((currentLinkPage - 1) * 100, currentLinkPage * 100),
+    [currentLinkPage, visibleLinkArtifacts]
+  )
+
   const counts = useMemo(() => {
     return artifactTabCounts(artifacts || [])
   }, [artifacts])
 
-  const openArtifact = useCallback(async (href: string) => {
-    try {
-      if (window.hermesDesktop?.openExternal) {
-        await window.hermesDesktop.openExternal(href)
-      } else {
-        window.open(href, '_blank', 'noopener,noreferrer')
+  const totalVisibleCount = counts.image + counts.file + counts.link
+
+  const openArtifact = useCallback(
+    async (href: string) => {
+      try {
+        if (window.hermesDesktop?.openExternal) {
+          await window.hermesDesktop.openExternal(href)
+        } else {
+          window.open(href, '_blank', 'noopener,noreferrer')
+        }
+      } catch (err) {
+        notifyError(err, a.openFailed)
       }
-    } catch (err) {
-      notifyError(err, a.openFailed)
-    }
-  }, [a])
+    },
+    [a]
+  )
 
   const markImageFailed = useCallback((id: string) => {
     setFailedImageIds(current => {
@@ -517,7 +525,7 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
     <PageSearchShell
       {...props}
       onSearchChange={setQuery}
-      searchHidden={counts.all === 0}
+      searchHidden={totalVisibleCount === 0}
       searchPlaceholder={a.search}
       searchTrailingAction={
         <Button
@@ -536,14 +544,14 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
       searchValue={query}
       tabs={
         <>
-          <TextTab active={kindFilter === 'all'} onClick={() => setKindFilter('all')}>
-            {a.tabAll} <TextTabMeta>({counts.all})</TextTabMeta>
-          </TextTab>
           <TextTab active={kindFilter === 'image'} onClick={() => setKindFilter('image')}>
             {a.tabImages} <TextTabMeta>({counts.image})</TextTabMeta>
           </TextTab>
           <TextTab active={kindFilter === 'file'} onClick={() => setKindFilter('file')}>
             {a.tabFiles} <TextTabMeta>({counts.file})</TextTabMeta>
+          </TextTab>
+          <TextTab active={kindFilter === 'link'} onClick={() => setKindFilter('link')}>
+            {a.tabLinks} <TextTabMeta>({counts.link})</TextTabMeta>
           </TextTab>
         </>
       }
@@ -612,6 +620,30 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
                 </div>
                 <div className="overflow-x-auto rounded-lg border border-(--ui-stroke-tertiary) bg-(--ui-chat-bubble-background)">
                   <ArtifactTable artifacts={pagedFileArtifacts} ctx={cellCtx} filter={kindFilter} />
+                </div>
+              </section>
+            )}
+
+            {visibleLinkArtifacts.length > 0 && (
+              <section className="flex flex-col">
+                <div
+                  className={cn(
+                    'sticky top-0 z-10 flex h-7 items-center gap-3 overflow-x-auto bg-background',
+                    PAGE_INSET_NEG_X,
+                    PAGE_INSET_X
+                  )}
+                >
+                  <ArtifactsPagination
+                    className="ml-auto justify-end px-0"
+                    itemLabel={a.itemsLink}
+                    onPageChange={setLinkPage}
+                    page={currentLinkPage}
+                    pageSize={100}
+                    total={visibleLinkArtifacts.length}
+                  />
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-(--ui-stroke-tertiary) bg-(--ui-chat-bubble-background)">
+                  <ArtifactTable artifacts={pagedLinkArtifacts} ctx={cellCtx} filter={kindFilter} />
                 </div>
               </section>
             )}
@@ -845,14 +877,16 @@ const ARTIFACT_COLUMNS: readonly ArtifactColumn[] = [
   {
     Cell: PrimaryCell,
     bodyClassName: 'p-0',
-    header: (filter, a) => (filter === 'file' ? a.colTitleFile : a.colTitleDefault),
+    header: (filter, a) =>
+      filter === 'link' ? a.colTitleLink : filter === 'file' ? a.colTitleFile : a.colTitleDefault,
     id: 'primary',
     width: () => 'w-[35%]'
   },
   {
     Cell: LocationCell,
     bodyClassName: 'px-2.5 py-1.5',
-    header: (filter, a) => (filter === 'file' ? a.colLocationFile : a.colLocationDefault),
+    header: (filter, a) =>
+      filter === 'link' ? a.colLocationLink : filter === 'file' ? a.colLocationFile : a.colLocationDefault,
     id: 'location',
     width: () => 'w-[41%]'
   },

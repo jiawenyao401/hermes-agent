@@ -352,7 +352,7 @@ export function CommandPalette() {
           {
             icon: Activity,
             id: 'cc-system',
-            keywords: ['command center', 'system', 'status', 'logs'],
+            keywords: ['command center', 'system', 'status'],
             label: cc.sections.system,
             run: go(`${COMMAND_CENTER_ROUTE}?section=system`)
           },

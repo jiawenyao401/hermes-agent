@@ -10,6 +10,7 @@ import { GatewayConnectingOverlay } from '@/components/gateway-connecting-overla
 import { Pane, PaneMain } from '@/components/pane-shell'
 import { RemoteDisplayBanner } from '@/components/remote-display-banner'
 import { useMediaQuery } from '@/hooks/use-media-query'
+import { openUpdatesWindow, startUpdatePoller, stopUpdatePoller } from '@/store/updates'
 import { useSkinCommand } from '@/themes/use-skin-command'
 
 import { formatRefValue } from '../components/assistant-ui/directive-text'
@@ -53,8 +54,8 @@ import {
   $gatewayState,
   $messages,
   $messagingSessions,
-  $resumeFailedSessionId,
   $resumeExhaustedSessionId,
+  $resumeFailedSessionId,
   $selectedStoredSessionId,
   $sessions,
   $workingSessionIds,
@@ -225,7 +226,6 @@ export function DesktopController() {
     commandCenterOpen,
     cronOpen,
     currentView,
-    openAgents,
     openCommandCenterSection,
     profilesOpen,
     settingsOpen,
@@ -521,7 +521,7 @@ export function DesktopController() {
     }
   }, [])
 
-  const { gatewayLogLines, inferenceStatus, statusSnapshot } = useStatusSnapshot(gatewayState, requestGateway)
+  const { inferenceStatus, statusSnapshot } = useStatusSnapshot(gatewayState, requestGateway)
 
   const updateActiveSessionRuntimeInfo = useCallback(
     (info: { branch?: string; cwd?: string }) => {
@@ -903,15 +903,13 @@ export function DesktopController() {
   })
 
   const { leftStatusbarItems, statusbarItems } = useStatusbarItems({
-    agentsOpen,
     chatOpen,
     commandCenterOpen,
     extraLeftItems: statusbarItemGroups.flat.left,
     extraRightItems: statusbarItemGroups.flat.right,
-    gatewayLogLines,
     gatewayState,
     inferenceStatus,
-    openAgents,
+    modelMenuContent,
     freshDraftReady,
     openCommandCenterSection,
     requestGateway,

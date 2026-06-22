@@ -5,6 +5,10 @@
 // npm workspace hoisting is non-deterministic — require.resolve finds electron
 // wherever it landed. Dist present → -c.electronDist=<abs>/dist; absent → let
 // electron-builder fetch via @electron/get (electronVersion + ELECTRON_MIRROR).
+//
+// Cross-building Windows from macOS must not reuse the host macOS Electron.app:
+// electron-builder needs the win32 zip so it can rename electron.exe to
+// AgentOS.exe. Set HERMES_ELECTRON_BUILDER_SKIP_LOCAL_DIST=1 for that path.
 
 const fs = require("node:fs")
 const path = require("node:path")
@@ -35,10 +39,16 @@ function electronBuilderCli() {
   return path.join(path.dirname(pkgJson), rel)
 }
 
-const dist = electronDistDir()
+const skipLocalDist = process.env.HERMES_ELECTRON_BUILDER_SKIP_LOCAL_DIST === "1"
+const dist = skipLocalDist ? null : electronDistDir()
 const args = []
 if (dist && fs.existsSync(distBinary(dist))) {
   args.push(`-c.electronDist=${dist}`)
+} else if (skipLocalDist) {
+  console.warn(
+    "[run-electron-builder] skipping local electronDist; electron-builder will fetch " +
+      "via @electron/get (electronVersion + ELECTRON_MIRROR)."
+  )
 } else {
   console.warn(
     "[run-electron-builder] no local electron dist; electron-builder will fetch " +

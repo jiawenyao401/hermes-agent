@@ -20,7 +20,6 @@ const crypto = require('node:crypto')
 const fs = require('node:fs')
 const http = require('node:http')
 const https = require('node:https')
-const net = require('node:net')
 const path = require('node:path')
 const { pathToFileURL } = require('node:url')
 const { execFileSync, spawn } = require('node:child_process')
@@ -321,7 +320,7 @@ const BOOTSTRAP_MARKER_SCHEMA_VERSION = 1
 const DESKTOP_CONNECTION_CONFIG_PATH = path.join(app.getPath('userData'), 'connection.json')
 const LOCKED_REMOTE_GATEWAY = Object.freeze({
   authMode: 'token',
-  token: 'vk4dO4OxwD5RkAlQcUYgq6Y4IPhcWzvQMSfOA2DH2Wc',
+  token: 'L8Xxgc1BClwbD4rMRnD3uktgflgeEbNuNGUkC63Li-w',
   url: 'http://192.168.1.100:9119'
 })
 const DESKTOP_UPDATE_CONFIG_PATH = path.join(app.getPath('userData'), 'updates.json')

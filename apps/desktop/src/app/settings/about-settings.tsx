@@ -2,9 +2,8 @@ import { useStore } from '@nanostores/react'
 import { useEffect } from 'react'
 
 import { BrandMark } from '@/components/brand-mark'
-import { useI18n } from '@/i18n'
-import { $desktopVersion, refreshDesktopVersion } from '@/store/updates'
 import { Button } from '@/components/ui/button'
+import type { DesktopUpdateStatus } from '@/global'
 import { type Translations, useI18n } from '@/i18n'
 import { CheckCircle2, ExternalLink, Loader2, RefreshCw, Sparkles } from '@/lib/icons'
 import { cn } from '@/lib/utils'
@@ -19,13 +18,72 @@ import {
   startActiveUpdate
 } from '@/store/updates'
 
-import { SettingsContent } from './primitives'
+import { ListRow, SectionHeading, SettingsContent } from './primitives'
 import { UninstallSection } from './uninstall-section'
+
+const RELEASE_NOTES_URL = 'https://github.com/NousResearch/Hermes-Agent/releases'
+
+function relativeTime(timestamp: number | undefined, copy: Translations['settings']['about']): string {
+  if (!timestamp) {
+    return copy.never
+  }
+
+  const elapsed = Math.max(0, Date.now() - timestamp)
+  const minutes = Math.floor(elapsed / 60_000)
+
+  if (minutes < 1) {
+    return copy.justNow
+  }
+
+  if (minutes < 60) {
+    return copy.minAgo(minutes)
+  }
+
+  const hours = Math.floor(minutes / 60)
+
+  if (hours < 24) {
+    return copy.hoursAgo(hours)
+  }
+
+  return copy.daysAgo(Math.floor(hours / 24))
+}
+
+function updateStatusLine(status: DesktopUpdateStatus | null, copy: Translations['settings']['about']): string {
+  if (!status) {
+    return copy.tapCheck
+  }
+
+  if (status.supported === false) {
+    return status.message || copy.cantUpdate
+  }
+
+  if (status.error) {
+    return copy.cantReach
+  }
+
+  const behind = status.behind ?? 0
+
+  if (behind > 0) {
+    return copy.updateReady(behind)
+  }
+
+  return copy.onLatest
+}
 
 export function AboutSettings() {
   const { t } = useI18n()
   const a = t.settings.about
   const version = useStore($desktopVersion)
+  const status = useStore($updateStatus)
+  const checking = useStore($updateChecking)
+  const apply = useStore($updateApply)
+  const applying = apply.applying
+  const supported = status?.supported !== false
+  const behind = status?.behind ?? 0
+  const justChecked = Boolean(status?.fetchedAt && Date.now() - status.fetchedAt < 30_000)
+  const statusLine = updateStatusLine(status, a)
+  const statusTone: 'available' | 'error' | 'idle' =
+    behind > 0 && supported && !status?.error ? 'available' : status?.error || !supported ? 'error' : 'idle'
 
   // The version atom is loaded once at app boot, which makes About show a
   // stale number after a self-update (the running binary is current, the
@@ -34,6 +92,8 @@ export function AboutSettings() {
   useEffect(() => {
     void refreshDesktopVersion()
   }, [])
+
+  const handleCheck = () => checkUpdates()
 
   return (
     <SettingsContent>

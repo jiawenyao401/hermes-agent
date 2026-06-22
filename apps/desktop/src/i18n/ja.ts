@@ -863,7 +863,7 @@ export const ja = defineLocale({
     sections: { sessions: 'セッション', system: 'システム', usage: '使用状況' },
     sectionDescriptions: {
       sessions: 'セッションの検索と管理',
-      system: 'ステータス、ログ、システムアクション',
+      system: 'ステータスとシステムアクション',
       usage: 'トークン、コスト、スキルの活動履歴'
     },
     nav: {
@@ -875,7 +875,7 @@ export const ja = defineLocale({
     },
     sectionEntries: {
       sessions: { title: 'セッションパネル', detail: 'セッションの検索、ピン留め、管理' },
-      system: { title: 'システムパネル', detail: 'ゲートウェイのステータス、ログ、再起動/更新' },
+      system: { title: 'システムパネル', detail: 'ゲートウェイのステータスと再起動/更新' },
       usage: { title: '使用状況パネル', detail: 'トークン、コスト、スキルの活動' }
     },
     providerNavigate: 'ナビゲート',
@@ -893,6 +893,9 @@ export const ja = defineLocale({
     hermesActiveSessions: (version, count) => `AgentOS ${version} · アクティブセッション ${count}`,
     restartMessaging: 'メッセージングを再起動',
     updateHermes: 'AgentOS を更新',
+    restartGateway: 'ゲートウェイを再起動',
+    gatewayRestartFailed: 'ゲートウェイの再起動に失敗しました。',
+    systemUnavailable: 'システムステータスを利用できません。',
     actionRunning: '実行中',
     actionDone: '完了',
     actionFailed: '失敗',
@@ -1057,6 +1060,7 @@ export const ja = defineLocale({
         help: '推奨。カンマ区切りの電話番号または WhatsApp ID。'
       }
     },
+    platformDescription: {},
     platformIntro: {}
   },
 

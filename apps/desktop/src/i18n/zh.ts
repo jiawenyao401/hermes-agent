@@ -932,7 +932,7 @@ export const zh: Translations = {
     sections: { sessions: '会话', system: '系统', usage: '用量' },
     sectionDescriptions: {
       sessions: '搜索与管理会话',
-      system: '状态、日志与系统操作',
+      system: '状态与系统操作',
       usage: '一段时间内的词元、成本与技能活动'
     },
     nav: {
@@ -944,7 +944,7 @@ export const zh: Translations = {
     },
     sectionEntries: {
       sessions: { title: '会话面板', detail: '搜索、置顶与管理会话' },
-      system: { title: '系统面板', detail: '网关状态、日志、重启/更新' },
+      system: { title: '系统面板', detail: '网关状态与重启/更新' },
       usage: { title: '用量面板', detail: '词元、成本与技能活动' }
     },
     providerNavigate: '导航',
@@ -962,6 +962,9 @@ export const zh: Translations = {
     hermesActiveSessions: (version, count) => `AgentOS ${version} · 活跃会话 ${count}`,
     restartMessaging: '重启消息服务',
     updateHermes: '更新 AgentOS',
+    restartGateway: '重启网关',
+    gatewayRestartFailed: '网关重启失败。',
+    systemUnavailable: '系统状态暂不可用。',
     actionRunning: '运行中',
     actionDone: '完成',
     actionFailed: '失败',
@@ -1060,9 +1063,114 @@ export const zh: Translations = {
       BLUEBUBBLES_ALLOW_ALL_USERS: { label: '允许所有 iMessage 用户', help: '为 true 时跳过 BlueBubbles 允许列表。' },
       MATTERMOST_ALLOW_ALL_USERS: { label: '允许所有 Mattermost 用户' },
       MATTERMOST_HOME_CHANNEL: { label: '主页频道' },
-      QQ_ALLOW_ALL_USERS: { label: '允许所有 QQ 用户' },
+      DINGTALK_CLIENT_ID: {
+        label: '客户端 ID',
+        help: '钉钉客户端 ID（App key）。',
+        placeholder: '客户端 ID'
+      },
+      DINGTALK_CLIENT_SECRET: {
+        label: '客户端密钥',
+        help: '钉钉客户端密钥（App secret）。',
+        placeholder: '客户端密钥'
+      },
+      FEISHU_APP_ID: {
+        label: 'App ID',
+        help: '飞书应用的 App ID。',
+        placeholder: 'App ID'
+      },
+      FEISHU_APP_SECRET: {
+        label: 'App 密钥',
+        help: '飞书应用的 App secret。',
+        placeholder: 'App 密钥'
+      },
+      FEISHU_ENCRYPT_KEY: {
+        label: '加密密钥',
+        help: '飞书事件订阅的加密密钥。',
+        placeholder: '加密密钥'
+      },
+      FEISHU_VERIFICATION_TOKEN: {
+        label: '校验 Token',
+        help: '飞书事件订阅的校验 Token。',
+        placeholder: '校验 Token'
+      },
+      QQ_APP_ID: {
+        label: 'QQ App ID',
+        help: 'QQ 开放平台 (q.qq.com) 中的机器人 App ID。',
+        placeholder: 'QQ App ID'
+      },
+      QQ_CLIENT_SECRET: {
+        label: 'QQ 客户端密钥',
+        help: 'QQ 开放平台中的机器人 Client Secret。',
+        placeholder: 'QQ 客户端密钥'
+      },
+      QQ_ALLOWED_USERS: {
+        label: '允许的 QQ 用户',
+        help: '允许使用机器人的 QQ 用户 ID，多个用英文逗号分隔。',
+        placeholder: '允许的 QQ 用户'
+      },
+      QQ_GROUP_ALLOWED_USERS: {
+        label: '允许的 QQ 群',
+        help: '允许与机器人交互的 QQ 群 ID，多个用英文逗号分隔。',
+        placeholder: '允许的 QQ 群'
+      },
+      QQ_ALLOW_ALL_USERS: { label: '允许所有 QQ 用户', help: '为 true 时，不使用 QQ 用户允许列表。' },
+      QQ_SANDBOX: {
+        label: 'QQ 沙箱模式',
+        help: '启用 QQ 沙箱模式用于开发测试（true/false）。',
+        placeholder: 'QQ 沙箱模式'
+      },
       QQBOT_HOME_CHANNEL: { label: 'QQ 主页频道', help: 'cron 投递的默认频道或群组。' },
       QQBOT_HOME_CHANNEL_NAME: { label: 'QQ 主页频道名称' },
+      WECOM_BOT_ID: {
+        label: '企业微信机器人 ID',
+        help: '企业微信群机器人 ID。',
+        placeholder: '企业微信机器人 ID'
+      },
+      WECOM_SECRET: {
+        label: '企业微信密钥',
+        help: '企业微信群机器人密钥。',
+        placeholder: '企业微信密钥'
+      },
+      WECOM_CALLBACK_CORP_ID: {
+        label: '企业 ID',
+        help: '企业微信企业 ID。',
+        placeholder: '企业 ID'
+      },
+      WECOM_CALLBACK_CORP_SECRET: {
+        label: '企业密钥',
+        help: '企业微信自建应用的 secret。',
+        placeholder: '企业密钥'
+      },
+      WECOM_CALLBACK_AGENT_ID: {
+        label: '应用 Agent ID',
+        help: '企业微信自建应用的 agent ID。',
+        placeholder: '应用 Agent ID'
+      },
+      WECOM_CALLBACK_TOKEN: {
+        label: '回调 Token',
+        help: '企业微信回调 URL 的验证 Token。',
+        placeholder: '回调 Token'
+      },
+      WECOM_CALLBACK_ENCODING_AES_KEY: {
+        label: 'AES 加密密钥',
+        help: '企业微信回调 URL 的 AES 加密密钥。',
+        placeholder: 'AES 加密密钥'
+      },
+      WEIXIN_ACCOUNT_ID: {
+        label: '账号 ID',
+        help: '微信公众号账号 ID。',
+        placeholder: '账号 ID'
+      },
+      WEIXIN_TOKEN: {
+        label: 'Token',
+        help: '微信回调 Token。',
+        placeholder: 'Token'
+      },
+      WEIXIN_BASE_URL: {
+        label: '基础 URL',
+        help: '微信平台基础 URL。',
+        placeholder: '基础 URL'
+      },
       SLACK_BOT_TOKEN: {
         label: 'Slack bot 令牌',
         help: '安装 Slack 应用后，在 OAuth & Permissions 中找到 bot 令牌。',
@@ -1092,6 +1200,14 @@ export const zh: Translations = {
       WHATSAPP_MODE: { label: '桥接模式' },
       WHATSAPP_ALLOWED_USERS: { label: '允许的 WhatsApp 用户', help: '推荐。逗号分隔的电话号码或 WhatsApp ID。' }
     },
+    platformDescription: {
+      dingtalk: '将 AgentOS 连接到钉钉群。',
+      feishu: '在飞书中使用 AgentOS。',
+      qqbot: '将 AgentOS 连接到 QQ 开放平台的 QQ 机器人。',
+      wecom: '通过群机器人接入企业微信。',
+      wecom_callback: '通过自建应用回调双向接入企业微信。',
+      weixin: '连接微信公众号。'
+    },
     platformIntro: {
       telegram:
         '在 Telegram 中，与 @BotFather 对话，运行 /newbot，复制它给你的令牌。然后从 @userinfobot 获取你的数字用户 ID。',
@@ -1112,7 +1228,7 @@ export const zh: Translations = {
       wecom: '在企业微信中添加群机器人，复制其 webhook key 作为 WECOM_BOT_ID。仅可发送——双向请用企业微信 (应用) 选项。',
       wecom_callback: '设置一个企业微信自建应用，暴露其回调 URL，并提供 corp ID、secret、agent ID 和 AES key。',
       weixin:
-        '运行 `hermes gateway setup`，选择 Weixin，然后使用个人微信账号扫描并确认二维码。AgentOS 会通过腾讯 iLink Bot API 连接并保存凭据。',
+        '运行 `hermes gateway setup`，选择微信，然后使用个人微信账号扫描并确认二维码。AgentOS 会通过腾讯 iLink Bot API 连接并保存凭据。',
       qqbot: '在 QQ 开放平台 (q.qq.com) 注册一个应用，复制 App ID 和 Client Secret。',
       api_server:
         '把 AgentOS 暴露为兼容 OpenAI 的 API。设置一个鉴权密钥，然后把 Open WebUI / LobeChat 等指向 host:port。',
